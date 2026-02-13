@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, time
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright, Page, Browser, TimeoutError as PwTimeout
@@ -69,6 +69,10 @@ SELECTORS = {
 
     # Shift cell text (inside DataCell)
     "cell_text": "span[data-cy='DataCellTextValue']",
+
+    # Times sub-span (appears when "Show Times" is enabled)
+    # e.g. <span class="times">9:00pm – 7:00am (02/18)</span>
+    "cell_times": "span.times",
 
     # Shift popup (appears when clicking a cell)
     "slot_popup": ".SlotPopUp:not(.hidden)",
@@ -419,10 +423,14 @@ def _extract_open_shifts(page: Page) -> list[OpenShift]:
             if "pending-chg" in text_classes:
                 continue
 
+            # Get the label text (just the direct text, not child spans)
+            # inner_text() returns "OPEN 1\n9:00pm – 7:00am (02/18)" but we
+            # want just "OPEN 1" as the label
             cell_text = text_el.inner_text().strip()
+            label = cell_text.split("\n")[0].strip()
 
             # Only process cells that contain "OPEN"
-            if not re.match(r"OPEN\s*\d*", cell_text, re.IGNORECASE):
+            if not re.match(r"OPEN\s*\d*", label, re.IGNORECASE):
                 continue
 
             # Map column index to date
@@ -431,10 +439,13 @@ def _extract_open_shifts(page: Page) -> list[OpenShift]:
             if not shift_date:
                 continue
 
-            # Parse times from cell text (if Show Times is enabled, text may include times)
-            # Expected format with times: "OPEN 1\n7:00a - 7:00p" or "OPEN 1 7:00a-7:00p"
-            label = cell_text.split("\n")[0].strip()
-            start_time, end_time = _parse_times_from_cell(cell_text, shift_date)
+            # Extract times from the .times child span
+            # Format: "9:00pm – 7:00am (02/18)" or "8:00am – 5:00pm"
+            times_el = text_el.query_selector(SELECTORS["cell_times"])
+            start_time, end_time = None, None
+            if times_el:
+                times_text = times_el.inner_text().strip()
+                start_time, end_time = _parse_times(times_text, shift_date)
 
             if not start_time or not end_time:
                 # Fallback: try reading times from popup
@@ -461,26 +472,6 @@ def _extract_open_shifts(page: Page) -> list[OpenShift]:
     return shifts
 
 
-def _parse_times_from_cell(cell_text: str, shift_date: str) -> tuple[str | None, str | None]:
-    """Try to extract start/end times from cell text (when Show Times is enabled).
-
-    The cell text with times enabled may look like:
-      "OPEN 1\n7:00a - 7:00p"
-      "OPEN 1\n07:00 - 19:00"
-      "OPEN 1  7:00a-7:00p"
-    """
-    # Look for time patterns anywhere in the text
-    # Pattern: time - time (12h or 24h)
-    match = re.search(
-        r"(\d{1,2}:\d{2}\s*[AaPp]?[Mm]?)\s*[-–]\s*(\d{1,2}:\d{2}\s*[AaPp]?[Mm]?)",
-        cell_text,
-    )
-    if not match:
-        return None, None
-
-    return _parse_times(match.group(0), shift_date)
-
-
 def _parse_date(date_text: str) -> str | None:
     """Parse a date string from the LB viewer into YYYY-MM-DD format.
 
@@ -499,71 +490,95 @@ def _parse_date(date_text: str) -> str | None:
     return None
 
 
-def _normalize_time_str(t: str) -> str:
-    """Normalize compact time strings like '7:00a' to '7:00 AM'."""
+def _parse_single_time(t: str) -> time | None:
+    """Parse a single time string like '9:00pm', '7:00am', '7:00 AM', '19:00'."""
     t = t.strip()
-    # Handle "7:00a" or "7:00p" → "7:00 AM" or "7:00 PM"
-    m = re.match(r"^(\d{1,2}:\d{2})\s*([AaPp])$", t)
+
+    # Normalize: "9:00pm" → "9:00 PM", "7:00am" → "7:00 AM"
+    m = re.match(r"^(\d{1,2}:\d{2})\s*([AaPp][Mm]?)$", t)
     if m:
-        suffix = "AM" if m.group(2).lower() == "a" else "PM"
-        return f"{m.group(1)} {suffix}"
-    # Handle "7:00am" or "7:00pm"
-    m = re.match(r"^(\d{1,2}:\d{2})\s*([AaPp][Mm])$", t)
-    if m:
-        return f"{m.group(1)} {m.group(2).upper()}"
-    return t
+        time_part = m.group(1)
+        suffix = m.group(2).upper()
+        if len(suffix) == 1:
+            suffix += "M"  # "P" → "PM", "A" → "AM"
+        normalized = f"{time_part} {suffix}"
+        try:
+            return datetime.strptime(normalized, "%I:%M %p").time()
+        except ValueError:
+            pass
+
+    # Try "7:00 AM" / "7:00 PM" as-is
+    for fmt in ("%I:%M %p", "%I:%M%p"):
+        try:
+            return datetime.strptime(t, fmt).time()
+        except ValueError:
+            continue
+
+    # Try 24-hour "19:00"
+    try:
+        return datetime.strptime(t, "%H:%M").time()
+    except ValueError:
+        pass
+
+    return None
 
 
 def _parse_times(time_text: str, shift_date: str | None) -> tuple[str | None, str | None]:
-    """Parse start and end times from time text.
+    """Parse start and end times from the .times span text.
 
-    Handles formats like:
-      "7:00 AM - 7:00 PM"
-      "7:00a - 7:00p"
-      "07:00 - 19:00"
-    Also searches within larger text blocks (popup text, etc.).
+    Actual formats from the LB viewer (with Show Times enabled):
+      "9:00pm – 7:00am (02/18)"   — overnight shift, end is next day
+      "8:00am – 5:00pm"           — same-day shift
+      "9:00pm – 7:00am (03/01)"   — overnight crossing month boundary
+
+    The (MM/DD) suffix indicates the end time falls on a different date.
+    When present, we use shift_date for start and the parenthesized date for end.
+    When absent, both start and end are on shift_date.
     """
     if not shift_date:
         return None, None
 
-    # Search for time range pattern anywhere in the text
+    # Match: "start_time – end_time" with optional "(MM/DD)" suffix
     match = re.search(
-        r"(\d{1,2}:\d{2}\s*[AaPp]?[Mm]?)\s*[-–]\s*(\d{1,2}:\d{2}\s*[AaPp]?[Mm]?)",
+        r"(\d{1,2}:\d{2}\s*[AaPp][Mm]?)\s*[-–]\s*(\d{1,2}:\d{2}\s*[AaPp][Mm]?)"
+        r"(?:\s*\((\d{1,2}/\d{1,2})\))?",
         time_text,
     )
     if not match:
+        # Try 24-hour fallback
+        match = re.search(
+            r"(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})"
+            r"(?:\s*\((\d{1,2}/\d{1,2})\))?",
+            time_text,
+        )
+    if not match:
+        logger.warning(f"Could not parse times: '{time_text}'")
         return None, None
 
-    start_str = _normalize_time_str(match.group(1))
-    end_str = _normalize_time_str(match.group(2))
+    start_t = _parse_single_time(match.group(1))
+    end_t = _parse_single_time(match.group(2))
+    end_date_suffix = match.group(3)  # e.g. "02/18" or None
 
-    base = datetime.strptime(shift_date, "%Y-%m-%d")
+    if not start_t or not end_t:
+        logger.warning(f"Could not parse individual times: '{time_text}'")
+        return None, None
 
-    # Try 12-hour formats
-    for fmt in ("%I:%M %p", "%I:%M%p"):
-        try:
-            start_t = datetime.strptime(start_str, fmt).time()
-            end_t = datetime.strptime(end_str, fmt).time()
-            return (
-                base.replace(hour=start_t.hour, minute=start_t.minute).isoformat(),
-                base.replace(hour=end_t.hour, minute=end_t.minute).isoformat(),
-            )
-        except ValueError:
-            continue
+    start_base = datetime.strptime(shift_date, "%Y-%m-%d")
+    start_dt = start_base.replace(hour=start_t.hour, minute=start_t.minute)
 
-    # Try 24-hour format
-    try:
-        start_t = datetime.strptime(start_str, "%H:%M").time()
-        end_t = datetime.strptime(end_str, "%H:%M").time()
-        return (
-            base.replace(hour=start_t.hour, minute=start_t.minute).isoformat(),
-            base.replace(hour=end_t.hour, minute=end_t.minute).isoformat(),
-        )
-    except ValueError:
-        pass
+    if end_date_suffix:
+        # Overnight shift — end time is on a different date
+        # The suffix is MM/DD without year; infer year from shift_date
+        end_month, end_day = map(int, end_date_suffix.split("/"))
+        end_base = start_base.replace(month=end_month, day=end_day)
+        # Handle year rollover (Dec shift ending in Jan)
+        if end_base < start_base:
+            end_base = end_base.replace(year=end_base.year + 1)
+        end_dt = end_base.replace(hour=end_t.hour, minute=end_t.minute)
+    else:
+        end_dt = start_base.replace(hour=end_t.hour, minute=end_t.minute)
 
-    logger.warning(f"Could not parse times: '{time_text}'")
-    return None, None
+    return start_dt.isoformat(), end_dt.isoformat()
 
 
 def scrape_open_shifts(username: str, password: str, headless: bool = True) -> list[OpenShift]:
