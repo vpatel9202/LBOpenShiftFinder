@@ -1,0 +1,55 @@
+name: Sync Open Shifts
+
+on:
+  schedule:
+    # Run 4x daily at 6am, 10am, 2pm, 6pm CT (UTC-6 = +6hrs, UTC-5 during DST = +5hrs)
+    # Using UTC times that approximate CT across both standard and daylight time
+    - cron: "0 12,16,20 * * *"   # ~6am, 10am, 2pm CT (during CST)
+    - cron: "0 0 * * *"          # ~6pm CT (during CST)
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Run sync
+        env:
+          LB_USERNAME: ${{ secrets.LB_USERNAME }}
+          LB_PASSWORD: ${{ secrets.LB_PASSWORD }}
+          LB_ICAL_URL: ${{ secrets.LB_ICAL_URL }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+        run: python -m src.main
+
+      - name: Upload debug screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshots
+          path: screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Commit updated state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state/synced_shifts.json
+          git diff --staged --quiet || git commit -m "Update synced shifts state" && git push
