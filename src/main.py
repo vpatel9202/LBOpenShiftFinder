@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
-from src.ical_parser import fetch_my_shifts, get_my_working_dates
+from src.ical_parser import fetch_my_shifts, conflicts_with_my_shifts
 from src.scraper import scrape_open_shifts
 from src.calendar_sync import sync_to_calendar
 from src.state import load_state, save_state
@@ -36,19 +36,31 @@ def main() -> None:
     logger.info("=" * 50)
     logger.info("Fetching personal shifts from iCal feed...")
     my_shifts = fetch_my_shifts(ical_url)
-    my_working_dates = get_my_working_dates(my_shifts)
-    logger.info(f"Working on {len(my_working_dates)} days in the lookahead window")
+    logger.info(f"Found {len(my_shifts)} scheduled shifts in lookahead window")
+    for s in my_shifts:
+        logger.info(f"  MY SHIFT: {s.date} | {s.start_time} - {s.end_time} | {s.assignment}")
 
     # Step 3: Scrape open shifts from Lightning Bolt
     logger.info("=" * 50)
     logger.info("Scraping open shifts from Lightning Bolt...")
     open_shifts = scrape_open_shifts(lb_username, lb_password)
 
-    # Step 4: Filter — only open shifts on days I'm NOT working
-    available_shifts = [s for s in open_shifts if s.date not in my_working_dates]
+    # Step 4: Filter — exclude open shifts that overlap with my shifts
+    # or that don't have at least 8 hours of rest between shifts
+    available_shifts = []
+    for s in open_shifts:
+        if not s.start_time or not s.end_time:
+            logger.debug(f"  SKIP (no times): {s.label} {s.assignment} on {s.date}")
+            continue
+        conflict = conflicts_with_my_shifts(s.start_time, s.end_time, my_shifts)
+        if conflict:
+            logger.info(f"  FILTERED OUT: {s.label} {s.assignment} on {s.date} ({s.start_time} - {s.end_time})")
+        else:
+            logger.debug(f"  AVAILABLE: {s.label} {s.assignment} on {s.date} ({s.start_time} - {s.end_time})")
+            available_shifts.append(s)
     logger.info(
         f"Open shifts: {len(open_shifts)} total, "
-        f"{len(available_shifts)} on days off"
+        f"{len(available_shifts)} available (no conflicts, 8hr rest)"
     )
 
     # Step 5: Diff with previous state

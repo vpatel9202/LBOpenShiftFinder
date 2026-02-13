@@ -610,22 +610,35 @@ def scrape_open_shifts(username: str, password: str, headless: bool = True) -> l
             # Scroll grid to ensure all virtualized rows are loaded
             _scroll_to_load_grid(page)
 
-            shifts = _extract_open_shifts(page)
-            _take_screenshot(page, "after_extraction")
-            _dump_html(page, "after_extraction")
+            all_shifts: list[OpenShift] = []
+            seen_keys: set[str] = set()
+            month_num = 0
 
-            # Also scrape next month
-            logger.info("Navigating to next month...")
-            page.click(SELECTORS["next_month_arrow"])
-            page.wait_for_timeout(2000)
-            _take_screenshot(page, "next_month_view")
+            while True:
+                _scroll_to_load_grid(page)
+                month_shifts = _extract_open_shifts(page)
+                _take_screenshot(page, f"month_{month_num}_extraction")
 
-            _scroll_to_load_grid(page)
-            next_month_shifts = _extract_open_shifts(page)
-            shifts.extend(next_month_shifts)
+                # Deduplicate — month views overlap (e.g. May shows Apr 27–May 3)
+                new_shifts = [s for s in month_shifts if s.unique_key not in seen_keys]
 
-            logger.info(f"Total open shifts across both months: {len(shifts)}")
-            return shifts
+                if not new_shifts:
+                    logger.info(f"Month {month_num}: no new open shifts — stopping")
+                    break
+
+                for s in new_shifts:
+                    seen_keys.add(s.unique_key)
+                all_shifts.extend(new_shifts)
+                logger.info(f"Month {month_num}: {len(new_shifts)} new shifts (total: {len(all_shifts)})")
+
+                # Advance to next month
+                month_num += 1
+                logger.info(f"Navigating to month {month_num}...")
+                page.click(SELECTORS["next_month_arrow"])
+                page.wait_for_timeout(2000)
+
+            logger.info(f"Total open shifts across {month_num + 1} months: {len(all_shifts)}")
+            return all_shifts
 
         except PwTimeout as e:
             logger.error(f"Timeout during scraping: {e}")
