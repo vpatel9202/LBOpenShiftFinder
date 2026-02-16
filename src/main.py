@@ -32,6 +32,7 @@ def main() -> None:
     state = load_state()
     previous_open_keys = {s.unique_key: s for s in state.synced_shifts}
     previous_picked_keys = {s.unique_key: s for s in state.picked_shifts}
+    previous_scheduled_keys = {s.unique_key: s for s in state.scheduled_shifts}
 
     # Step 2: Fetch my shifts from iCal feed
     logger.info("=" * 50)
@@ -78,9 +79,13 @@ def main() -> None:
         f"{len(available_shifts)} available (no conflicts with iCal + picked shifts)"
     )
 
-    # Step 5: Diff with previous state (for both open and picked shifts)
+    # Step 5: Diff with previous state (for open, picked, and scheduled shifts)
+    # Convert scheduled shifts to OpenShift for calendar sync
+    scheduled_as_open = [s.to_open_shift() for s in my_shifts]
+
     current_open_keys = {s.unique_key for s in available_shifts}
     current_picked_keys = {s.unique_key for s in picked_shifts}
+    current_scheduled_keys = {s.unique_key for s in scheduled_as_open}
 
     open_to_add = [s for s in available_shifts if s.unique_key not in previous_open_keys]
     open_to_remove = [s for s in state.synced_shifts if s.unique_key not in current_open_keys]
@@ -90,20 +95,27 @@ def main() -> None:
     picked_to_remove = [s for s in state.picked_shifts if s.unique_key not in current_picked_keys]
     picked_to_keep = [s for s in state.picked_shifts if s.unique_key in current_picked_keys]
 
+    scheduled_to_add = [s for s in scheduled_as_open if s.unique_key not in previous_scheduled_keys]
+    scheduled_to_remove = [s for s in state.scheduled_shifts if s.unique_key not in current_scheduled_keys]
+    scheduled_to_keep = [s for s in state.scheduled_shifts if s.unique_key in current_scheduled_keys]
+
     logger.info(f"Open shifts: add {len(open_to_add)}, remove {len(open_to_remove)}, keep {len(open_to_keep)}")
     logger.info(f"Picked shifts: add {len(picked_to_add)}, remove {len(picked_to_remove)}, keep {len(picked_to_keep)}")
+    logger.info(f"Scheduled shifts: add {len(scheduled_to_add)}, remove {len(scheduled_to_remove)}, keep {len(scheduled_to_keep)}")
 
     # Step 6: Sync to Google Calendar
-    if open_to_add or open_to_remove or picked_to_add or picked_to_remove:
+    if open_to_add or open_to_remove or picked_to_add or picked_to_remove or scheduled_to_add or scheduled_to_remove:
         logger.info("=" * 50)
         logger.info("Syncing to Google Calendar...")
-        newly_synced_open, newly_synced_picked = sync_to_calendar(
+        newly_synced_open, newly_synced_picked, newly_synced_scheduled = sync_to_calendar(
             service_account_json=google_sa_json,
             calendar_id=google_calendar_id,
             open_to_add=open_to_add,
             open_to_remove=open_to_remove,
             picked_to_add=picked_to_add,
             picked_to_remove=picked_to_remove,
+            scheduled_to_add=scheduled_to_add,
+            scheduled_to_remove=scheduled_to_remove,
         )
 
         # Step 7: Update and save state
@@ -111,6 +123,7 @@ def main() -> None:
             last_run=datetime.now(timezone.utc).isoformat(),
             synced_shifts=open_to_keep + newly_synced_open,
             picked_shifts=picked_to_keep + newly_synced_picked,
+            scheduled_shifts=scheduled_to_keep + newly_synced_scheduled,
         )
         save_state(state)
     else:
@@ -121,8 +134,9 @@ def main() -> None:
     # Summary
     logger.info("=" * 50)
     logger.info("SYNC COMPLETE")
-    logger.info(f"  Open shifts:   added {len(open_to_add)}, removed {len(open_to_remove)}, total {len(state.synced_shifts)}")
-    logger.info(f"  Picked shifts: added {len(picked_to_add)}, removed {len(picked_to_remove)}, total {len(state.picked_shifts)}")
+    logger.info(f"  Open shifts:      added {len(open_to_add)}, removed {len(open_to_remove)}, total {len(state.synced_shifts)}")
+    logger.info(f"  Picked shifts:    added {len(picked_to_add)}, removed {len(picked_to_remove)}, total {len(state.picked_shifts)}")
+    logger.info(f"  Scheduled shifts: added {len(scheduled_to_add)}, removed {len(scheduled_to_remove)}, total {len(state.scheduled_shifts)}")
     logger.info("=" * 50)
 
 

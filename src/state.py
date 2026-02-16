@@ -22,7 +22,10 @@ def load_state() -> SyncState:
     try:
         data = STATE_FILE.read_text(encoding="utf-8")
         state = SyncState.from_json(data)
-        logger.info(f"Loaded state: {len(state.synced_shifts)} open shifts, {len(state.picked_shifts)} picked shifts")
+        logger.info(
+            f"Loaded state: {len(state.synced_shifts)} open, "
+            f"{len(state.picked_shifts)} picked, {len(state.scheduled_shifts)} scheduled"
+        )
         return state
     except (json.JSONDecodeError, KeyError) as e:
         logger.warning(f"Corrupted state file, starting fresh: {e}")
@@ -33,4 +36,7 @@ def save_state(state: SyncState) -> None:
     """Save the sync state to disk."""
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(state.to_json(), encoding="utf-8")
-    logger.info(f"Saved state: {len(state.synced_shifts)} open shifts, {len(state.picked_shifts)} picked shifts")
+    logger.info(
+        f"Saved state: {len(state.synced_shifts)} open, "
+        f"{len(state.picked_shifts)} picked, {len(state.scheduled_shifts)} scheduled"
+    )

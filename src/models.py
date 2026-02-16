@@ -17,6 +17,16 @@ class Shift:
     def unique_key(self) -> str:
         return f"{self.date}|{self.start_time}|{self.end_time}|{self.assignment}"
 
+    def to_open_shift(self) -> "OpenShift":
+        """Convert to OpenShift for calendar sync (uses assignment as label)."""
+        return OpenShift(
+            date=self.date,
+            start_time=self.start_time,
+            end_time=self.end_time,
+            assignment=self.assignment,
+            label="Scheduled",
+        )
+
 
 @dataclass
 class OpenShift:
@@ -64,6 +74,7 @@ class SyncState:
     last_run: str | None = None
     synced_shifts: list[SyncedShift] = field(default_factory=list)
     picked_shifts: list[SyncedShift] = field(default_factory=list)
+    scheduled_shifts: list[SyncedShift] = field(default_factory=list)
 
     def to_json(self) -> str:
         return json.dumps(
@@ -71,6 +82,7 @@ class SyncState:
                 "last_run": self.last_run,
                 "synced_shifts": [asdict(s) for s in self.synced_shifts],
                 "picked_shifts": [asdict(s) for s in self.picked_shifts],
+                "scheduled_shifts": [asdict(s) for s in self.scheduled_shifts],
             },
             indent=2,
         )
@@ -85,5 +97,8 @@ class SyncState:
             ],
             picked_shifts=[
                 SyncedShift(**s) for s in parsed.get("picked_shifts", [])
+            ],
+            scheduled_shifts=[
+                SyncedShift(**s) for s in parsed.get("scheduled_shifts", [])
             ],
         )

@@ -20,8 +20,9 @@ MANAGED_EVENT_TAG = "lbOpenShiftFinder"
 # Google Calendar event color IDs:
 # 1=Lavender, 2=Sage, 3=Grape, 4=Flamingo, 5=Banana,
 # 6=Tangerine, 7=Peacock, 8=Graphite, 9=Blueberry, 10=Basil, 11=Tomato
-OPEN_SHIFT_COLOR = "2"   # Sage (green-ish) for open shifts
-PICKED_SHIFT_COLOR = "9"  # Blueberry (blue) for picked-up shifts
+OPEN_SHIFT_COLOR = "2"       # Sage (green-ish) for open shifts
+PICKED_SHIFT_COLOR = "9"     # Blueberry (blue) for picked-up shifts
+SCHEDULED_SHIFT_COLOR = "3"  # Grape (purple) for regular scheduled shifts
 
 
 def _get_calendar_service(service_account_info: dict):
@@ -39,6 +40,7 @@ def add_open_shift(
     shift: OpenShift,
     color_id: str = OPEN_SHIFT_COLOR,
     is_picked: bool = False,
+    is_scheduled: bool = False,
 ) -> str:
     """Add an open shift as a Google Calendar event.
 
@@ -48,20 +50,31 @@ def add_open_shift(
         shift: The shift to add.
         color_id: Google Calendar color ID (defaults to sage green for open shifts).
         is_picked: Whether this is a picked-up shift (affects summary prefix).
+        is_scheduled: Whether this is a regular scheduled shift from iCal.
 
     Returns:
         The Google Calendar event ID.
     """
-    prefix = "PICKED" if is_picked else "OPEN"
-    desc_status = "picked up by you" if is_picked else "available on Lightning Bolt"
+    if is_scheduled:
+        prefix = shift.assignment
+        desc_status = "your regular scheduled shift"
+        shift_type = "scheduled"
+    elif is_picked:
+        prefix = "PICKED"
+        desc_status = "picked up by you"
+        shift_type = "picked"
+    else:
+        prefix = "OPEN"
+        desc_status = "available on Lightning Bolt"
+        shift_type = "open"
 
     event_body = {
-        "summary": f"{prefix}: {shift.assignment} ({shift.label})",
+        "summary": f"{prefix}" if is_scheduled else f"{prefix}: {shift.assignment} ({shift.label})",
         "description": (
-            f"Open shift {desc_status}\n"
+            f"Shift {desc_status}\n"
             f"Assignment: {shift.assignment}\n"
-            f"Label: {shift.label}\n\n"
-            f"Auto-managed by LBOpenShiftFinder"
+            + (f"Label: {shift.label}\n" if not is_scheduled else "") +
+            f"\nAuto-managed by LBOpenShiftFinder"
         ),
         "start": {
             "dateTime": shift.start_time,
@@ -76,7 +89,7 @@ def add_open_shift(
             "private": {
                 MANAGED_EVENT_TAG: "true",
                 "openShiftKey": shift.unique_key,
-                "isPicked": "true" if is_picked else "false",
+                "shiftType": shift_type,
             },
         },
     }
@@ -136,7 +149,9 @@ def sync_to_calendar(
     open_to_remove: list[SyncedShift],
     picked_to_add: list[OpenShift],
     picked_to_remove: list[SyncedShift],
-) -> tuple[list[SyncedShift], list[SyncedShift]]:
+    scheduled_to_add: list[OpenShift],
+    scheduled_to_remove: list[SyncedShift],
+) -> tuple[list[SyncedShift], list[SyncedShift], list[SyncedShift]]:
     """Perform the actual sync: add new shifts, remove stale ones.
 
     Args:
@@ -146,19 +161,21 @@ def sync_to_calendar(
         open_to_remove: Previously synced open shifts to remove.
         picked_to_add: Picked-up shifts to add to the calendar.
         picked_to_remove: Previously synced picked-up shifts to remove.
+        scheduled_to_add: Scheduled shifts to add to the calendar.
+        scheduled_to_remove: Previously synced scheduled shifts to remove.
 
     Returns:
-        Tuple of (newly_synced_open, newly_synced_picked) with Google event IDs.
+        Tuple of (newly_synced_open, newly_synced_picked, newly_synced_scheduled) with Google event IDs.
     """
     service_account_info = json.loads(service_account_json)
     service = _get_calendar_service(service_account_info)
 
-    # Remove stale open shifts
+    # Remove stale shifts
     for shift in open_to_remove:
         remove_open_shift(service, calendar_id, shift.google_event_id)
-
-    # Remove stale picked shifts
     for shift in picked_to_remove:
+        remove_open_shift(service, calendar_id, shift.google_event_id)
+    for shift in scheduled_to_remove:
         remove_open_shift(service, calendar_id, shift.google_event_id)
 
     # Add new open shifts (sage green)
@@ -173,4 +190,10 @@ def sync_to_calendar(
         event_id = add_open_shift(service, calendar_id, shift, color_id=PICKED_SHIFT_COLOR, is_picked=True)
         newly_synced_picked.append(SyncedShift.from_open_shift(shift, event_id))
 
-    return newly_synced_open, newly_synced_picked
+    # Add new scheduled shifts (grape purple)
+    newly_synced_scheduled: list[SyncedShift] = []
+    for shift in scheduled_to_add:
+        event_id = add_open_shift(service, calendar_id, shift, color_id=SCHEDULED_SHIFT_COLOR, is_picked=False, is_scheduled=True)
+        newly_synced_scheduled.append(SyncedShift.from_open_shift(shift, event_id))
+
+    return newly_synced_open, newly_synced_picked, newly_synced_scheduled
