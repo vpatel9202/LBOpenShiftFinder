@@ -112,6 +112,55 @@ The workflow at `.github/workflows/sync.yml` runs automatically at approximately
 
 To **disable** automatic runs: Actions tab > click the workflow > `...` menu > **Disable workflow**. You can re-enable it the same way.
 
+## Configuration
+
+All configuration options can be set in your `.env` file (for local runs) or as GitHub secrets (for automated runs):
+
+### Sync Options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SYNC_OPEN_SHIFTS` | `true` | Sync available open shifts to calendar |
+| `SYNC_PICKED_SHIFTS` | `true` | Sync shifts you've picked up to calendar |
+| `SYNC_SCHEDULED_SHIFTS` | `true` | Sync your regular scheduled shifts (from iCal) to calendar |
+| `MIN_REST_HOURS` | `8` | Minimum hours of rest required between shifts for conflict filtering |
+| `ICAL_LOOKAHEAD_DAYS` | `180` | How many days ahead to fetch from your iCal feed |
+
+### Calendar Colors
+
+Customize which Google Calendar color each shift type uses (1-11):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPEN_SHIFT_COLOR` | `2` | Color for available open shifts (Sage/green) |
+| `PICKED_SHIFT_COLOR` | `9` | Color for picked-up shifts (Blueberry/blue) |
+| `SCHEDULED_SHIFT_COLOR` | `3` | Color for scheduled shifts (Grape/purple) |
+
+**Available colors:** 1=Lavender, 2=Sage, 3=Grape, 4=Flamingo, 5=Banana, 6=Tangerine, 7=Peacock, 8=Graphite, 9=Blueberry, 10=Basil, 11=Tomato
+
+### Example `.env` with Custom Configuration
+
+```env
+# Credentials (required)
+LB_USERNAME=you@hospital.org
+LB_PASSWORD=your_password
+LB_ICAL_URL=https://lblite.lightning-bolt.com/ical/your-feed
+GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+GOOGLE_CALENDAR_ID=you@gmail.com
+
+# Sync options (optional)
+SYNC_OPEN_SHIFTS=true
+SYNC_PICKED_SHIFTS=true
+SYNC_SCHEDULED_SHIFTS=false  # Don't sync regular shifts, only open/picked
+MIN_REST_HOURS=10            # Require 10 hours between shifts instead of 8
+ICAL_LOOKAHEAD_DAYS=90       # Only look 3 months ahead
+
+# Colors (optional)
+OPEN_SHIFT_COLOR=5           # Use Banana (yellow) for open shifts
+PICKED_SHIFT_COLOR=11        # Use Tomato (red) for picked shifts
+SCHEDULED_SHIFT_COLOR=7      # Use Peacock (teal) for scheduled shifts
+```
+
 ## Usage
 
 ### Run Locally
@@ -130,32 +179,44 @@ python -m src.scraper --recon
 ### Filtering Rules
 
 An open shift is excluded if any of the following are true:
-- It **overlaps in time** with one of your scheduled shifts (even by 1 minute)
-- There is **less than 8 hours** between the end of one shift and the start of the other (in either direction)
+- It **overlaps in time** with one of your scheduled or picked-up shifts (even by 1 minute)
+- There is **less than the minimum rest time** (default 8 hours, configurable via `MIN_REST_HOURS`) between the end of one shift and the start of the other (in either direction)
   - Example: Your shift ends at 5am → an open shift starting at 7am the same day is blocked (only 2 hours gap)
   - Example: An open shift ends at 7am → your shift starts at 7am → blocked (0 hours gap)
 
-The 8-hour rest minimum is defined as `MIN_REST_HOURS` in `src/ical_parser.py` if you need to adjust it.
+The rest period can be adjusted via the `MIN_REST_HOURS` environment variable (see Configuration section).
 
 ### Calendar Events
 
-Open shifts appear on your Google Calendar as:
-- **Title:** `OPEN: {Assignment} ({Label})` (e.g., "OPEN: R27 (OPEN 1)")
-- **Color:** Sage (green)
-- **Description:** Auto-managed notice with shift details
+The tool creates color-coded events for each shift type:
 
-Events are tagged with a private extended property (`lbOpenShiftFinder=true`) so the tool only manages its own events — your other calendar entries are never touched.
+**Open Shifts** (available to pick up):
+- **Title:** `OPEN: {Assignment} ({Label})` (e.g., "OPEN: R27 (OPEN 1)")
+- **Color:** Sage/green (default, configurable)
+- **Description:** Shift available on Lightning Bolt
+
+**Picked Shifts** (shifts you've picked up):
+- **Title:** `PICKED: {Assignment} ({Label})` (e.g., "PICKED: R27 (OPEN 1)")
+- **Color:** Blueberry/blue (default, configurable)
+- **Description:** Shift picked up by you
+
+**Scheduled Shifts** (your regular shifts from iCal):
+- **Title:** `{Assignment}` (e.g., "R27")
+- **Color:** Grape/purple (default, configurable)
+- **Description:** Your regular scheduled shift
+
+All events are tagged with a private extended property (`lbOpenShiftFinder=true`) so the tool only manages its own events — your other calendar entries are never touched.
 
 ### State Management
 
 The file `state/synced_shifts.json` tracks which shifts are currently on your calendar (including their Google event IDs). This allows the tool to:
-- **Detect removed shifts** — if an open shift disappears from LB, it gets deleted from your calendar
+- **Detect removed shifts** — if a shift disappears from LB or your iCal feed, it gets deleted from your calendar
 - **Avoid duplicates** — shifts already on the calendar aren't re-added
-- **Self-correct** — if filtering rules change, conflicting shifts are removed on the next run
+- **Self-correct** — if filtering rules or sync settings change, the calendar is updated accordingly
 
 In CI, this file is auto-committed after each run. If you need to reset, replace its contents with:
 ```json
-{"last_run": null, "synced_shifts": []}
+{"last_run": null, "synced_shifts": [], "picked_shifts": [], "scheduled_shifts": []}
 ```
 
 ## Project Structure

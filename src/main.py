@@ -18,6 +18,11 @@ from src.models import SyncState, SyncedShift, Shift
 logger = logging.getLogger(__name__)
 
 
+def _str_to_bool(value: str) -> bool:
+    """Convert environment variable string to boolean."""
+    return value.lower() in ("true", "1", "yes", "on")
+
+
 def main() -> None:
     load_dotenv()
 
@@ -27,6 +32,13 @@ def main() -> None:
     ical_url = os.environ["LB_ICAL_URL"]
     google_sa_json = os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]
     google_calendar_id = os.environ.get("GOOGLE_CALENDAR_ID", "primary")
+
+    # Load sync configuration
+    sync_open = _str_to_bool(os.getenv("SYNC_OPEN_SHIFTS", "true"))
+    sync_picked = _str_to_bool(os.getenv("SYNC_PICKED_SHIFTS", "true"))
+    sync_scheduled = _str_to_bool(os.getenv("SYNC_SCHEDULED_SHIFTS", "true"))
+
+    logger.info(f"Sync config: open={sync_open}, picked={sync_picked}, scheduled={sync_scheduled}")
 
     # Step 1: Load previous sync state
     state = load_state()
@@ -83,21 +95,41 @@ def main() -> None:
     # Convert scheduled shifts to OpenShift for calendar sync
     scheduled_as_open = [s.to_open_shift() for s in my_shifts]
 
-    current_open_keys = {s.unique_key for s in available_shifts}
-    current_picked_keys = {s.unique_key for s in picked_shifts}
-    current_scheduled_keys = {s.unique_key for s in scheduled_as_open}
+    # Only track shifts for enabled sync types
+    current_open_keys = {s.unique_key for s in available_shifts} if sync_open else set()
+    current_picked_keys = {s.unique_key for s in picked_shifts} if sync_picked else set()
+    current_scheduled_keys = {s.unique_key for s in scheduled_as_open} if sync_scheduled else set()
 
-    open_to_add = [s for s in available_shifts if s.unique_key not in previous_open_keys]
-    open_to_remove = [s for s in state.synced_shifts if s.unique_key not in current_open_keys]
-    open_to_keep = [s for s in state.synced_shifts if s.unique_key in current_open_keys]
+    # Open shifts diff
+    if sync_open:
+        open_to_add = [s for s in available_shifts if s.unique_key not in previous_open_keys]
+        open_to_remove = [s for s in state.synced_shifts if s.unique_key not in current_open_keys]
+        open_to_keep = [s for s in state.synced_shifts if s.unique_key in current_open_keys]
+    else:
+        # If sync is disabled, remove all previously synced shifts of this type
+        open_to_add = []
+        open_to_remove = state.synced_shifts
+        open_to_keep = []
 
-    picked_to_add = [s for s in picked_shifts if s.unique_key not in previous_picked_keys]
-    picked_to_remove = [s for s in state.picked_shifts if s.unique_key not in current_picked_keys]
-    picked_to_keep = [s for s in state.picked_shifts if s.unique_key in current_picked_keys]
+    # Picked shifts diff
+    if sync_picked:
+        picked_to_add = [s for s in picked_shifts if s.unique_key not in previous_picked_keys]
+        picked_to_remove = [s for s in state.picked_shifts if s.unique_key not in current_picked_keys]
+        picked_to_keep = [s for s in state.picked_shifts if s.unique_key in current_picked_keys]
+    else:
+        picked_to_add = []
+        picked_to_remove = state.picked_shifts
+        picked_to_keep = []
 
-    scheduled_to_add = [s for s in scheduled_as_open if s.unique_key not in previous_scheduled_keys]
-    scheduled_to_remove = [s for s in state.scheduled_shifts if s.unique_key not in current_scheduled_keys]
-    scheduled_to_keep = [s for s in state.scheduled_shifts if s.unique_key in current_scheduled_keys]
+    # Scheduled shifts diff
+    if sync_scheduled:
+        scheduled_to_add = [s for s in scheduled_as_open if s.unique_key not in previous_scheduled_keys]
+        scheduled_to_remove = [s for s in state.scheduled_shifts if s.unique_key not in current_scheduled_keys]
+        scheduled_to_keep = [s for s in state.scheduled_shifts if s.unique_key in current_scheduled_keys]
+    else:
+        scheduled_to_add = []
+        scheduled_to_remove = state.scheduled_shifts
+        scheduled_to_keep = []
 
     logger.info(f"Open shifts: add {len(open_to_add)}, remove {len(open_to_remove)}, keep {len(open_to_keep)}")
     logger.info(f"Picked shifts: add {len(picked_to_add)}, remove {len(picked_to_remove)}, keep {len(picked_to_keep)}")

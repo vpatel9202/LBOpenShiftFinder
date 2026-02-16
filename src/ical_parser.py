@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -18,18 +19,25 @@ logger = logging.getLogger(__name__)
 # with the scraper output (which produces naive local times)
 LOCAL_TZ = ZoneInfo("America/Chicago")
 
+# Configuration from environment variables
+MIN_REST_HOURS = int(os.getenv("MIN_REST_HOURS", "8"))
+ICAL_LOOKAHEAD_DAYS = int(os.getenv("ICAL_LOOKAHEAD_DAYS", "180"))
 
-def fetch_my_shifts(ical_url: str, lookahead_days: int = 180) -> list[Shift]:
+
+def fetch_my_shifts(ical_url: str, lookahead_days: int | None = None) -> list[Shift]:
     """Fetch and parse the user's iCal feed, returning their scheduled shifts.
 
     Args:
         ical_url: The iCal subscription URL from Lightning Bolt.
-        lookahead_days: How many days ahead to look for shifts.
+        lookahead_days: How many days ahead to look for shifts (defaults to ICAL_LOOKAHEAD_DAYS env var).
 
     Returns:
         List of Shift objects for the user's scheduled shifts.
     """
-    logger.info("Fetching iCal feed...")
+    if lookahead_days is None:
+        lookahead_days = ICAL_LOOKAHEAD_DAYS
+
+    logger.info(f"Fetching iCal feed (lookahead: {lookahead_days} days)...")
     response = requests.get(ical_url, timeout=30)
     response.raise_for_status()
 
@@ -83,10 +91,6 @@ def fetch_my_shifts(ical_url: str, lookahead_days: int = 180) -> list[Shift]:
 def get_my_working_dates(shifts: list[Shift]) -> set[str]:
     """Extract the set of dates (YYYY-MM-DD) on which the user is working."""
     return {shift.date for shift in shifts}
-
-
-# Minimum hours between end of one shift and start of another
-MIN_REST_HOURS = 8
 
 
 def _parse_dt(iso_str: str) -> datetime:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime
 
 import json
@@ -17,12 +18,12 @@ logger = logging.getLogger(__name__)
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 MANAGED_EVENT_TAG = "lbOpenShiftFinder"
 
-# Google Calendar event color IDs:
+# Google Calendar event color IDs (configurable via environment variables):
 # 1=Lavender, 2=Sage, 3=Grape, 4=Flamingo, 5=Banana,
 # 6=Tangerine, 7=Peacock, 8=Graphite, 9=Blueberry, 10=Basil, 11=Tomato
-OPEN_SHIFT_COLOR = "2"       # Sage (green-ish) for open shifts
-PICKED_SHIFT_COLOR = "9"     # Blueberry (blue) for picked-up shifts
-SCHEDULED_SHIFT_COLOR = "3"  # Grape (purple) for regular scheduled shifts
+OPEN_SHIFT_COLOR = os.getenv("OPEN_SHIFT_COLOR", "2")       # Default: Sage (green)
+PICKED_SHIFT_COLOR = os.getenv("PICKED_SHIFT_COLOR", "9")   # Default: Blueberry (blue)
+SCHEDULED_SHIFT_COLOR = os.getenv("SCHEDULED_SHIFT_COLOR", "3")  # Default: Grape (purple)
 
 
 def _get_calendar_service(service_account_info: dict):
