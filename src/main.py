@@ -13,7 +13,7 @@ from src.ical_parser import fetch_my_shifts, conflicts_with_my_shifts
 from src.scraper import scrape_open_shifts
 from src.calendar_sync import sync_to_calendar
 from src.state import load_state, save_state
-from src.models import SyncState, SyncedShift
+from src.models import SyncState, SyncedShift, Shift
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,8 @@ def main() -> None:
 
     # Step 1: Load previous sync state
     state = load_state()
-    previous_keys = {s.unique_key: s for s in state.synced_shifts}
+    previous_open_keys = {s.unique_key: s for s in state.synced_shifts}
+    previous_picked_keys = {s.unique_key: s for s in state.picked_shifts}
 
     # Step 2: Fetch my shifts from iCal feed
     logger.info("=" * 50)
@@ -40,19 +41,33 @@ def main() -> None:
     for s in my_shifts:
         logger.info(f"  MY SHIFT: {s.date} | {s.start_time} - {s.end_time} | {s.assignment}")
 
-    # Step 3: Scrape open shifts from Lightning Bolt
+    # Step 3: Scrape open shifts and picked-up shifts from Lightning Bolt
     logger.info("=" * 50)
-    logger.info("Scraping open shifts from Lightning Bolt...")
-    open_shifts = scrape_open_shifts(lb_username, lb_password)
+    logger.info("Scraping shifts from Lightning Bolt...")
+    open_shifts, picked_shifts = scrape_open_shifts(lb_username, lb_password)
+    logger.info(f"Found {len(picked_shifts)} picked-up shifts")
+    for s in picked_shifts:
+        logger.info(f"  PICKED: {s.label} {s.assignment} on {s.date} ({s.start_time} - {s.end_time})")
 
-    # Step 4: Filter — exclude open shifts that overlap with my shifts
-    # or that don't have at least 8 hours of rest between shifts
+    # Step 4: Filter — exclude open shifts that overlap with my shifts or picked shifts
+    # or that don't have at least 8 hours of rest between shifts.
+    # Combine iCal shifts with picked-up shifts for conflict checking.
+    combined_my_shifts = my_shifts + [
+        Shift(
+            date=s.date,
+            start_time=s.start_time,
+            end_time=s.end_time,
+            assignment=s.assignment,
+        )
+        for s in picked_shifts
+    ]
+
     available_shifts = []
     for s in open_shifts:
         if not s.start_time or not s.end_time:
             logger.debug(f"  SKIP (no times): {s.label} {s.assignment} on {s.date}")
             continue
-        conflict = conflicts_with_my_shifts(s.start_time, s.end_time, my_shifts)
+        conflict = conflicts_with_my_shifts(s.start_time, s.end_time, combined_my_shifts)
         if conflict:
             logger.info(f"  FILTERED OUT: {s.label} {s.assignment} on {s.date} ({s.start_time} - {s.end_time})")
         else:
@@ -60,33 +75,42 @@ def main() -> None:
             available_shifts.append(s)
     logger.info(
         f"Open shifts: {len(open_shifts)} total, "
-        f"{len(available_shifts)} available (no conflicts, 8hr rest)"
+        f"{len(available_shifts)} available (no conflicts with iCal + picked shifts)"
     )
 
-    # Step 5: Diff with previous state
-    current_keys = {s.unique_key for s in available_shifts}
+    # Step 5: Diff with previous state (for both open and picked shifts)
+    current_open_keys = {s.unique_key for s in available_shifts}
+    current_picked_keys = {s.unique_key for s in picked_shifts}
 
-    to_add = [s for s in available_shifts if s.unique_key not in previous_keys]
-    to_remove = [s for s in state.synced_shifts if s.unique_key not in current_keys]
-    to_keep = [s for s in state.synced_shifts if s.unique_key in current_keys]
+    open_to_add = [s for s in available_shifts if s.unique_key not in previous_open_keys]
+    open_to_remove = [s for s in state.synced_shifts if s.unique_key not in current_open_keys]
+    open_to_keep = [s for s in state.synced_shifts if s.unique_key in current_open_keys]
 
-    logger.info(f"To add: {len(to_add)} | To remove: {len(to_remove)} | Unchanged: {len(to_keep)}")
+    picked_to_add = [s for s in picked_shifts if s.unique_key not in previous_picked_keys]
+    picked_to_remove = [s for s in state.picked_shifts if s.unique_key not in current_picked_keys]
+    picked_to_keep = [s for s in state.picked_shifts if s.unique_key in current_picked_keys]
+
+    logger.info(f"Open shifts: add {len(open_to_add)}, remove {len(open_to_remove)}, keep {len(open_to_keep)}")
+    logger.info(f"Picked shifts: add {len(picked_to_add)}, remove {len(picked_to_remove)}, keep {len(picked_to_keep)}")
 
     # Step 6: Sync to Google Calendar
-    if to_add or to_remove:
+    if open_to_add or open_to_remove or picked_to_add or picked_to_remove:
         logger.info("=" * 50)
         logger.info("Syncing to Google Calendar...")
-        newly_synced = sync_to_calendar(
+        newly_synced_open, newly_synced_picked = sync_to_calendar(
             service_account_json=google_sa_json,
             calendar_id=google_calendar_id,
-            to_add=to_add,
-            to_remove=to_remove,
+            open_to_add=open_to_add,
+            open_to_remove=open_to_remove,
+            picked_to_add=picked_to_add,
+            picked_to_remove=picked_to_remove,
         )
 
         # Step 7: Update and save state
         state = SyncState(
             last_run=datetime.now(timezone.utc).isoformat(),
-            synced_shifts=to_keep + newly_synced,
+            synced_shifts=open_to_keep + newly_synced_open,
+            picked_shifts=picked_to_keep + newly_synced_picked,
         )
         save_state(state)
     else:
@@ -97,9 +121,8 @@ def main() -> None:
     # Summary
     logger.info("=" * 50)
     logger.info("SYNC COMPLETE")
-    logger.info(f"  Added:     {len(to_add)}")
-    logger.info(f"  Removed:   {len(to_remove)}")
-    logger.info(f"  Total now: {len(state.synced_shifts)}")
+    logger.info(f"  Open shifts:   added {len(open_to_add)}, removed {len(open_to_remove)}, total {len(state.synced_shifts)}")
+    logger.info(f"  Picked shifts: added {len(picked_to_add)}, removed {len(picked_to_remove)}, total {len(state.picked_shifts)}")
     logger.info("=" * 50)
 
 

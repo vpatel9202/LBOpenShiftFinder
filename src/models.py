@@ -63,12 +63,14 @@ class SyncState:
     """Persisted state tracking which shifts are synced to Google Calendar."""
     last_run: str | None = None
     synced_shifts: list[SyncedShift] = field(default_factory=list)
+    picked_shifts: list[SyncedShift] = field(default_factory=list)
 
     def to_json(self) -> str:
         return json.dumps(
             {
                 "last_run": self.last_run,
                 "synced_shifts": [asdict(s) for s in self.synced_shifts],
+                "picked_shifts": [asdict(s) for s in self.picked_shifts],
             },
             indent=2,
         )
@@ -80,5 +82,8 @@ class SyncState:
             last_run=parsed.get("last_run"),
             synced_shifts=[
                 SyncedShift(**s) for s in parsed.get("synced_shifts", [])
+            ],
+            picked_shifts=[
+                SyncedShift(**s) for s in parsed.get("picked_shifts", [])
             ],
         )

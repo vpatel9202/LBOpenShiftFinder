@@ -350,8 +350,8 @@ def _read_popup_times(page: Page, cell) -> tuple[str | None, str | None]:
         return None, None
 
 
-def _extract_open_shifts(page: Page) -> list[OpenShift]:
-    """Parse the schedule grid and extract open shifts.
+def _extract_open_shifts(page: Page) -> tuple[list[OpenShift], list[OpenShift]]:
+    """Parse the schedule grid and extract open shifts and picked-up shifts.
 
     Grid structure (from DOM recon):
       - .StandardContainer > .WeekContainer holds the entire grid
@@ -363,8 +363,13 @@ def _extract_open_shifts(page: Page) -> list[OpenShift]:
         - Open shifts show "OPEN 1", "OPEN 2", etc.
         - Taken shifts have span.text.pending-chg class ("OPEN 1 → [Name]")
       - Elements are absolutely positioned; rows belong to the header above them
+
+    Returns:
+        Tuple of (open_shifts, picked_shifts) where picked_shifts are those
+        taken by the user (detected via "Vash Patel" in the text).
     """
-    shifts: list[OpenShift] = []
+    open_shifts: list[OpenShift] = []
+    picked_shifts: list[OpenShift] = []
 
     # The WeekContainer's parent has height/width: 0px with overflow visible,
     # so Playwright considers it "hidden". Wait for DOM attachment instead.
@@ -418,20 +423,25 @@ def _extract_open_shifts(page: Page) -> list[OpenShift]:
             if not text_el:
                 continue
 
-            # Skip taken shifts (those with pending-chg class)
-            text_classes = text_el.get_attribute("class") or ""
-            if "pending-chg" in text_classes:
-                continue
-
-            # Get the label text (just the direct text, not child spans)
-            # inner_text() returns "OPEN 1\n9:00pm – 7:00am (02/18)" but we
-            # want just "OPEN 1" as the label
+            # Get the full cell text
             cell_text = text_el.inner_text().strip()
             label = cell_text.split("\n")[0].strip()
 
             # Only process cells that contain "OPEN"
             if not re.match(r"OPEN\s*\d*", label, re.IGNORECASE):
                 continue
+
+            # Check if this shift is taken by someone
+            text_classes = text_el.get_attribute("class") or ""
+            is_picked_by_me = False
+            if "pending-chg" in text_classes:
+                # Taken shift — check if it's taken by me (case-insensitive match for Vash/Vashishtha Patel)
+                if re.search(r"(vash|vashishtha)\s+patel", cell_text, re.IGNORECASE):
+                    is_picked_by_me = True
+                    logger.debug(f"Found picked-up shift: {label} on {week_dates[col_idx]}")
+                else:
+                    # Taken by someone else — skip it
+                    continue
 
             # Map column index to date
             date_str = week_dates[col_idx]  # Format: MM/DD/YYYY
@@ -460,16 +470,21 @@ def _extract_open_shifts(page: Page) -> list[OpenShift]:
                 start_time = base.replace(hour=0, minute=0).isoformat()
                 end_time = base.replace(hour=23, minute=59).isoformat()
 
-            shifts.append(OpenShift(
+            shift = OpenShift(
                 date=shift_date,
                 start_time=start_time,
                 end_time=end_time,
                 assignment=assignment,
                 label=label,
-            ))
+            )
 
-    logger.info(f"Found {len(shifts)} open shifts")
-    return shifts
+            if is_picked_by_me:
+                picked_shifts.append(shift)
+            else:
+                open_shifts.append(shift)
+
+    logger.info(f"Found {len(open_shifts)} open shifts and {len(picked_shifts)} picked-up shifts")
+    return open_shifts, picked_shifts
 
 
 def _parse_date(date_text: str) -> str | None:
@@ -581,7 +596,7 @@ def _parse_times(time_text: str, shift_date: str | None) -> tuple[str | None, st
     return start_dt.isoformat(), end_dt.isoformat()
 
 
-def scrape_open_shifts(username: str, password: str, headless: bool = True) -> list[OpenShift]:
+def scrape_open_shifts(username: str, password: str, headless: bool = True) -> tuple[list[OpenShift], list[OpenShift]]:
     """Main entry point: scrape open shifts from Lightning Bolt.
 
     Args:
@@ -590,7 +605,8 @@ def scrape_open_shifts(username: str, password: str, headless: bool = True) -> l
         headless: Run browser in headless mode (False for recon/debug).
 
     Returns:
-        List of OpenShift objects found on the schedule.
+        Tuple of (open_shifts, picked_shifts) where picked_shifts are those
+        already picked up by the user.
     """
     with sync_playwright() as p:
         browser: Browser = p.chromium.launch(headless=headless)
@@ -610,26 +626,29 @@ def scrape_open_shifts(username: str, password: str, headless: bool = True) -> l
             # Scroll grid to ensure all virtualized rows are loaded
             _scroll_to_load_grid(page)
 
-            all_shifts: list[OpenShift] = []
+            all_open_shifts: list[OpenShift] = []
+            all_picked_shifts: list[OpenShift] = []
             seen_keys: set[str] = set()
             month_num = 0
 
             while True:
                 _scroll_to_load_grid(page)
-                month_shifts = _extract_open_shifts(page)
+                month_open, month_picked = _extract_open_shifts(page)
                 _take_screenshot(page, f"month_{month_num}_extraction")
 
-                # Deduplicate — month views overlap (e.g. May shows Apr 27–May 3)
-                new_shifts = [s for s in month_shifts if s.unique_key not in seen_keys]
+                # Deduplicate both lists — month views overlap (e.g. May shows Apr 27–May 3)
+                new_open = [s for s in month_open if s.unique_key not in seen_keys]
+                new_picked = [s for s in month_picked if s.unique_key not in seen_keys]
 
-                if not new_shifts:
-                    logger.info(f"Month {month_num}: no new open shifts — stopping")
+                if not new_open and not new_picked:
+                    logger.info(f"Month {month_num}: no new shifts — stopping")
                     break
 
-                for s in new_shifts:
+                for s in new_open + new_picked:
                     seen_keys.add(s.unique_key)
-                all_shifts.extend(new_shifts)
-                logger.info(f"Month {month_num}: {len(new_shifts)} new shifts (total: {len(all_shifts)})")
+                all_open_shifts.extend(new_open)
+                all_picked_shifts.extend(new_picked)
+                logger.info(f"Month {month_num}: {len(new_open)} open + {len(new_picked)} picked (total: {len(all_open_shifts)} + {len(all_picked_shifts)})")
 
                 # Advance to next month
                 month_num += 1
@@ -637,8 +656,8 @@ def scrape_open_shifts(username: str, password: str, headless: bool = True) -> l
                 page.click(SELECTORS["next_month_arrow"])
                 page.wait_for_timeout(2000)
 
-            logger.info(f"Total open shifts across {month_num + 1} months: {len(all_shifts)}")
-            return all_shifts
+            logger.info(f"Total across {month_num + 1} months: {len(all_open_shifts)} open, {len(all_picked_shifts)} picked")
+            return all_open_shifts, all_picked_shifts
 
         except PwTimeout as e:
             logger.error(f"Timeout during scraping: {e}")
@@ -695,10 +714,14 @@ def run_recon(username: str, password: str) -> None:
         # Test extraction
         print("[STEP 4] Testing shift extraction...")
         _scroll_to_load_grid(page)
-        shifts = _extract_open_shifts(page)
-        print(f"  Found {len(shifts)} open shifts:")
-        for s in shifts:
+        open_shifts, picked_shifts = _extract_open_shifts(page)
+        print(f"  Found {len(open_shifts)} open shifts:")
+        for s in open_shifts:
             print(f"    {s.label}: {s.assignment} on {s.date} ({s.start_time} - {s.end_time})")
+        if picked_shifts:
+            print(f"  Found {len(picked_shifts)} picked-up shifts:")
+            for s in picked_shifts:
+                print(f"    {s.label}: {s.assignment} on {s.date} ({s.start_time} - {s.end_time})")
 
         # Pause for inspection
         print("\n[STEP 5] Manual inspection.")
@@ -734,6 +757,11 @@ if __name__ == "__main__":
     if args.recon:
         run_recon(username, password)
     else:
-        shifts = scrape_open_shifts(username, password, headless=False)
-        for s in shifts:
+        open_shifts, picked_shifts = scrape_open_shifts(username, password, headless=False)
+        print(f"Open shifts ({len(open_shifts)}):")
+        for s in open_shifts:
             print(f"  {s.label}: {s.assignment} on {s.date} ({s.start_time} - {s.end_time})")
+        if picked_shifts:
+            print(f"\nPicked-up shifts ({len(picked_shifts)}):")
+            for s in picked_shifts:
+                print(f"  {s.label}: {s.assignment} on {s.date} ({s.start_time} - {s.end_time})")
