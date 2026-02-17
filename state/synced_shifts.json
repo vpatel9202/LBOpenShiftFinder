@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-02-16T23:56:21.449138+00:00",
+  "last_run": "2026-02-17T00:00:52.336031+00:00",
   "synced_shifts": [
     {
       "date": "2026-01-27",
@@ -352,6 +352,14 @@
       "assignment": "APP PA",
       "label": "OPEN 1",
       "google_event_id": "iqm7ul77n97pedts837ttarasg"
+    },
+    {
+      "date": "2026-02-15",
+      "start_time": "2026-02-15T21:00:00",
+      "end_time": "2026-02-16T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "4djp2cuhfhsfcd1b6bd6gqcjd4"
     }
   ],
   "picked_shifts": [
@@ -373,14 +381,6 @@
     }
   ],
   "scheduled_shifts": [
-    {
-      "date": "2026-02-16",
-      "start_time": "2026-02-16T07:00:00",
-      "end_time": "2026-02-16T17:00:00",
-      "assignment": "T1",
-      "label": "Scheduled",
-      "google_event_id": "aq0hp63tsoru28kf5iouk1n86g"
-    },
     {
       "date": "2026-02-17",
       "start_time": "2026-02-17T13:00:00",
