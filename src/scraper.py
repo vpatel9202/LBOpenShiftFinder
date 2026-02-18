@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 from datetime import datetime, time
 from pathlib import Path
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 LB_LOGIN_URL = "https://lblite.lightning-bolt.com/login"
 SCREENSHOTS_DIR = Path(__file__).parent.parent / "screenshots"
+MY_NAME_PATTERN = os.getenv("MY_NAME_PATTERN", "")
 
 # =============================================================================
 # CSS SELECTORS
@@ -366,7 +368,7 @@ def _extract_open_shifts(page: Page) -> tuple[list[OpenShift], list[OpenShift]]:
 
     Returns:
         Tuple of (open_shifts, picked_shifts) where picked_shifts are those
-        taken by the user (detected via "Vash Patel" in the text).
+        taken by the user (detected via MY_NAME_PATTERN match in the cell text).
     """
     open_shifts: list[OpenShift] = []
     picked_shifts: list[OpenShift] = []
@@ -435,8 +437,8 @@ def _extract_open_shifts(page: Page) -> tuple[list[OpenShift], list[OpenShift]]:
             text_classes = text_el.get_attribute("class") or ""
             is_picked_by_me = False
             if "pending-chg" in text_classes:
-                # Taken shift — check if it's taken by me (case-insensitive match for Vash/Vashishtha Patel)
-                if re.search(r"(vash|vashishtha)\s+patel", cell_text, re.IGNORECASE):
+                # Taken shift — check if it's taken by me (case-insensitive match against MY_NAME_PATTERN)
+                if MY_NAME_PATTERN and re.search(MY_NAME_PATTERN, cell_text, re.IGNORECASE):
                     is_picked_by_me = True
                     logger.debug(f"Found picked-up shift: {label} on {week_dates[col_idx]}")
                 else:
