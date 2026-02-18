@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-02-17T20:29:03.868738+00:00",
+  "last_run": "2026-02-18T01:56:54.920615+00:00",
   "synced_shifts": [
     {
       "date": "2026-01-27",
@@ -368,35 +368,34 @@
       "assignment": "R29",
       "label": "OPEN 1",
       "google_event_id": "2c7j70vvk6nsr123fa4dt9b4rg"
-    }
-  ],
-  "picked_shifts": [
-    {
-      "date": "2026-03-01",
-      "start_time": "2026-03-01T08:00:00",
-      "end_time": "2026-03-01T17:00:00",
-      "assignment": "R27",
-      "label": "OPEN 1  [Vash Patel]",
-      "google_event_id": "0p7bdvpfbqusrljm63nivti3us"
     },
     {
-      "date": "2026-03-09",
-      "start_time": "2026-03-09T07:00:00",
-      "end_time": "2026-03-09T17:00:00",
-      "assignment": "R29",
-      "label": "OPEN 1  [Vash Patel]",
-      "google_event_id": "imat9pqh6n3uf65r7c2rd4l7e8"
-    }
-  ],
-  "scheduled_shifts": [
+      "date": "2026-02-16",
+      "start_time": "2026-02-16T21:00:00",
+      "end_time": "2026-02-17T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "gtb3bnlqb1fn9ofmhe8uc4nl74"
+    },
     {
       "date": "2026-02-17",
-      "start_time": "2026-02-17T13:00:00",
-      "end_time": "2026-02-17T23:00:00",
-      "assignment": "T2",
-      "label": "Scheduled",
-      "google_event_id": "og4tocb5aas62edh5hqloemdio"
+      "start_time": "2026-02-17T21:00:00",
+      "end_time": "2026-02-18T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "bfht4a8rtvellmpkq88le8jkqo"
     },
+    {
+      "date": "2026-02-17",
+      "start_time": "2026-02-17T07:00:00",
+      "end_time": "2026-02-17T17:00:00",
+      "assignment": "Care Team APP - 2",
+      "label": "OPEN 1",
+      "google_event_id": "m399k82tflacbdf99mbnemmji0"
+    }
+  ],
+  "picked_shifts": [],
+  "scheduled_shifts": [
     {
       "date": "2026-02-19",
       "start_time": "2026-02-19T08:00:00",
@@ -764,6 +763,22 @@
       "assignment": "Backup night - 1",
       "label": "Scheduled",
       "google_event_id": "c9vnlfo562fbkiipbqon4rlqdc"
+    },
+    {
+      "date": "2026-03-01",
+      "start_time": "2026-03-01T08:00:00",
+      "end_time": "2026-03-01T17:00:00",
+      "assignment": "R27",
+      "label": "Scheduled",
+      "google_event_id": "725vre61n1m4u7ltljovqk4te0"
+    },
+    {
+      "date": "2026-03-09",
+      "start_time": "2026-03-09T07:00:00",
+      "end_time": "2026-03-09T17:00:00",
+      "assignment": "R29",
+      "label": "Scheduled",
+      "google_event_id": "c9emjc05dtn7mksrb24itr3r80"
     }
   ]
 }
