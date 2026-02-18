@@ -37,8 +37,15 @@ def main() -> None:
     sync_open = _str_to_bool(os.getenv("SYNC_OPEN_SHIFTS", "true"))
     sync_picked = _str_to_bool(os.getenv("SYNC_PICKED_SHIFTS", "true"))
     sync_scheduled = _str_to_bool(os.getenv("SYNC_SCHEDULED_SHIFTS", "true"))
+    excluded_labels = {
+        label.strip().lower()
+        for label in os.getenv("EXCLUDED_SHIFT_LABELS", "").split(",")
+        if label.strip()
+    }
 
     logger.info(f"Sync config: open={sync_open}, picked={sync_picked}, scheduled={sync_scheduled}")
+    if excluded_labels:
+        logger.info(f"Excluding iCal labels from calendar sync: {excluded_labels}")
 
     # Step 1: Load previous sync state
     state = load_state()
@@ -92,8 +99,12 @@ def main() -> None:
     )
 
     # Step 5: Diff with previous state (for open, picked, and scheduled shifts)
-    # Convert scheduled shifts to OpenShift for calendar sync
-    scheduled_as_open = [s.to_open_shift() for s in my_shifts]
+    # Convert scheduled shifts to OpenShift for calendar sync, excluding filtered labels.
+    # Note: excluded shifts are still used above for conflict detection.
+    scheduled_as_open = [
+        s.to_open_shift() for s in my_shifts
+        if s.assignment.lower() not in excluded_labels
+    ]
 
     # Only track shifts for enabled sync types
     current_open_keys = {s.unique_key for s in available_shifts} if sync_open else set()
