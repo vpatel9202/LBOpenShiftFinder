@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-02-21T20:16:13.264600+00:00",
+  "last_run": "2026-02-22T01:54:47.102166+00:00",
   "synced_shifts": [
     {
       "date": "2026-01-27",
@@ -136,14 +136,6 @@
       "assignment": "R28",
       "label": "OPEN 1",
       "google_event_id": "ekqpgsrsjp6ob8la5otv8c4au0"
-    },
-    {
-      "date": "2026-02-22",
-      "start_time": "2026-02-22T07:00:00",
-      "end_time": "2026-02-22T17:00:00",
-      "assignment": "R28",
-      "label": "OPEN 1",
-      "google_event_id": "t1sf9ah8clh5383bat4d0a39tc"
     },
     {
       "date": "2026-02-22",
