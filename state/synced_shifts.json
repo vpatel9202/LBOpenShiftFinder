@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-02-26T20:28:42.966088+00:00",
+  "last_run": "2026-02-27T01:49:46.621740+00:00",
   "synced_shifts": [
     {
       "date": "2026-01-27",
@@ -152,22 +152,6 @@
       "assignment": "APP A-2",
       "label": "OPEN 1",
       "google_event_id": "nsqej71ibmstpk7gkuqchestkg"
-    },
-    {
-      "date": "2026-03-15",
-      "start_time": "2026-03-15T07:00:00",
-      "end_time": "2026-03-15T17:00:00",
-      "assignment": "R28",
-      "label": "OPEN 1",
-      "google_event_id": "k877u7h05ieifqadun0op5lcf0"
-    },
-    {
-      "date": "2026-03-14",
-      "start_time": "2026-03-14T07:00:00",
-      "end_time": "2026-03-14T17:00:00",
-      "assignment": "R29",
-      "label": "OPEN 1",
-      "google_event_id": "hf1101ps7trmetlh96i6nio244"
     },
     {
       "date": "2026-03-15",
@@ -364,14 +348,6 @@
   ],
   "picked_shifts": [],
   "scheduled_shifts": [
-    {
-      "date": "2026-02-26",
-      "start_time": "2026-02-26T07:00:00",
-      "end_time": "2026-02-26T17:00:00",
-      "assignment": "R20",
-      "label": "Scheduled",
-      "google_event_id": "q38u7p0kv6c11uhj0vrom4f62s"
-    },
     {
       "date": "2026-02-27",
       "start_time": "2026-02-27T07:00:00",
