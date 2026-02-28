@@ -24,6 +24,7 @@ MANAGED_EVENT_TAG = "lbOpenShiftFinder"
 OPEN_SHIFT_COLOR = os.getenv("OPEN_SHIFT_COLOR", "2")       # Default: Sage (green)
 PICKED_SHIFT_COLOR = os.getenv("PICKED_SHIFT_COLOR", "9")   # Default: Blueberry (blue)
 SCHEDULED_SHIFT_COLOR = os.getenv("SCHEDULED_SHIFT_COLOR", "3")  # Default: Grape (purple)
+LOCAL_TIMEZONE = os.getenv("LOCAL_TIMEZONE", "America/Chicago")
 
 
 def _get_calendar_service(service_account_info: dict):
@@ -79,11 +80,11 @@ def add_open_shift(
         ),
         "start": {
             "dateTime": shift.start_time,
-            "timeZone": "America/Chicago",
+            "timeZone": LOCAL_TIMEZONE,
         },
         "end": {
             "dateTime": shift.end_time,
-            "timeZone": "America/Chicago",
+            "timeZone": LOCAL_TIMEZONE,
         },
         "colorId": color_id,
         "extendedProperties": {

@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 LB_LOGIN_URL = "https://lblite.lightning-bolt.com/login"
 SCREENSHOTS_DIR = Path(__file__).parent.parent / "screenshots"
 MY_NAME_PATTERN = os.getenv("MY_NAME_PATTERN", "")
+LB_VIEW_NAME = os.getenv("LB_VIEW_NAME", "BSW Hospital Medicine - Dallas")
 
 # =============================================================================
 # CSS SELECTORS
@@ -134,7 +135,7 @@ def _navigate_to_open_shifts(page: Page) -> None:
     Flow:
       1. Click "Viewer" tile on the selection screen
       2. Click "Me" button in the top bar
-      3. Click "BSW Hospital Medicine - Dallas" in the sidebar
+      3. Click the LB_VIEW_NAME link in the sidebar
       4. Click "Filter Personnel" dropdown
       5. Search "Open" and select all matching checkboxes
       6. Close the dropdown
@@ -152,25 +153,24 @@ def _navigate_to_open_shifts(page: Page) -> None:
     page.click(SELECTORS["me_button"])
     page.wait_for_timeout(1500)  # Wait for sidebar animation
 
-    # Step 3: Click "BSW Hospital Medicine - Dallas" in the sidebar
-    logger.info("Selecting BSW Hospital Medicine - Dallas...")
+    # Step 3: Click the target organization/view link in the sidebar
+    logger.info(f"Selecting view: '{LB_VIEW_NAME}'...")
     page.wait_for_selector(SELECTORS["bsw_dallas_link"], timeout=10000)
 
-    # There may be multiple view-links; find the one containing "BSW Hospital Medicine - Dallas"
     links = page.query_selector_all(SELECTORS["bsw_dallas_link"])
     clicked = False
     for link in links:
         text = link.inner_text().strip()
-        if "BSW Hospital Medicine" in text and "Dallas" in text:
+        if LB_VIEW_NAME in text:
             link.click()
             clicked = True
             break
 
     if not clicked:
-        # Fallback: click the first view-link if only one exists, or log available options
+        # Fallback: click the first view-link and log available options
         if links:
             available = [l.inner_text().strip() for l in links]
-            logger.warning(f"Could not find BSW Dallas link. Available: {available}")
+            logger.warning(f"Could not find view '{LB_VIEW_NAME}'. Available: {available}")
             logger.info("Clicking first available view link as fallback...")
             links[0].click()
         else:

@@ -6,6 +6,7 @@ import logging
 import os
 import sys
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
@@ -17,6 +18,8 @@ from src.models import SyncState, SyncedShift, Shift
 
 logger = logging.getLogger(__name__)
 
+LOCAL_TIMEZONE = os.getenv("LOCAL_TIMEZONE", "America/Chicago")
+
 
 def _str_to_bool(value: str) -> bool:
     """Convert environment variable string to boolean."""
@@ -24,9 +27,14 @@ def _str_to_bool(value: str) -> bool:
 
 
 def _shift_has_started(shift) -> bool:
-    """Return True if the shift has already started (ongoing or completed)."""
+    """Return True if the shift has already started (ongoing or completed).
+
+    Compares against the current time in LOCAL_TIMEZONE to avoid the UTC
+    mismatch that would occur when running on GitHub Actions (UTC system clock).
+    """
     try:
-        return datetime.fromisoformat(shift.start_time) < datetime.now()
+        now_local = datetime.now(ZoneInfo(LOCAL_TIMEZONE)).replace(tzinfo=None)
+        return datetime.fromisoformat(shift.start_time) < now_local
     except (ValueError, TypeError):
         return False
 

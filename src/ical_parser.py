@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # All times are converted to this timezone for consistent comparison
 # with the scraper output (which produces naive local times)
-LOCAL_TZ = ZoneInfo("America/Chicago")
+LOCAL_TZ = ZoneInfo(os.getenv("LOCAL_TIMEZONE", "America/Chicago"))
 
 # Configuration from environment variables
 MIN_REST_HOURS = int(os.getenv("MIN_REST_HOURS", "8"))

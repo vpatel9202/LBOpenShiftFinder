@@ -190,6 +190,8 @@ git pull --rebase && git push
 ### Optional (with defaults)
 | Variable | Default | Description |
 |---|---|---|
+| `LB_VIEW_NAME` | `"BSW Hospital Medicine - Dallas"` | Substring of the sidebar view link to click after login. Falls back to first link if unset or not found |
+| `LOCAL_TIMEZONE` | `"America/Chicago"` | IANA timezone name used for all time comparisons and calendar events. Must match where shifts are worked |
 | `MY_NAME_PATTERN` | `""` | Regex to detect your picked-up shifts (e.g. `(john\|jonathan)\s+doe`). Empty = no picked-up detection |
 | `KEEP_PAST_SHIFTS` | `false` | When true, preserves started/completed shifts on calendar (for payroll verification) |
 | `SYNC_OPEN_SHIFTS` | `true` | Sync available open shifts |
@@ -216,6 +218,7 @@ git pull --rebase && git push
 
 ## Common Pitfalls & Notes
 
+- **`LOCAL_TIMEZONE` must be consistent** — GitHub Actions runs UTC; `_shift_has_started()` uses `datetime.now(ZoneInfo(LOCAL_TIMEZONE))` to avoid a 6-hour offset bug where upcoming shifts would appear to have already started
 - **`KEEP_PAST_SHIFTS` uses `start_time < now`** (not end_time) — protects shifts that are ongoing OR completed, so a mid-shift sync never deletes an active event
 - **`EXCLUDED_SHIFT_LABELS`** filters calendar sync only — excluded labels (e.g. Vacation) still participate in conflict detection to block open shifts during those days
 - **`MY_NAME_PATTERN` defaults to empty** — if not set, picked-up shift detection is silently disabled (shifts show as open instead of picked)
