@@ -23,10 +23,10 @@ def _str_to_bool(value: str) -> bool:
     return value.lower() in ("true", "1", "yes", "on")
 
 
-def _shift_has_ended(shift) -> bool:
-    """Return True if the shift's end time is in the past."""
+def _shift_has_started(shift) -> bool:
+    """Return True if the shift has already started (ongoing or completed)."""
     try:
-        return datetime.fromisoformat(shift.end_time) < datetime.now()
+        return datetime.fromisoformat(shift.start_time) < datetime.now()
     except (ValueError, TypeError):
         return False
 
@@ -158,7 +158,7 @@ def main() -> None:
             (picked_to_remove, picked_to_keep),
             (scheduled_to_remove, scheduled_to_keep),
         ]:
-            past = [s for s in remove_list if _shift_has_ended(s)]
+            past = [s for s in remove_list if _shift_has_started(s)]
             if past:
                 keep_list += past
                 for s in past:
