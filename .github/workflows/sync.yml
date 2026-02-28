@@ -56,6 +56,12 @@ jobs:
           OPEN_SHIFT_COLOR: ${{ secrets.OPEN_SHIFT_COLOR }}
           PICKED_SHIFT_COLOR: ${{ secrets.PICKED_SHIFT_COLOR }}
           SCHEDULED_SHIFT_COLOR: ${{ secrets.SCHEDULED_SHIFT_COLOR }}
+          NOTIFY_ENABLED: ${{ secrets.NOTIFY_ENABLED }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         run: python -m src.main
 
       - name: Upload debug screenshots

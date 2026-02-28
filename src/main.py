@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import traceback
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ from src.scraper import scrape_open_shifts
 from src.calendar_sync import sync_to_calendar
 from src.state import load_state, save_state
 from src.models import SyncState, SyncedShift, Shift
+from src.notifier import send_notification, WarningCollector
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,34 @@ def _shift_has_started(shift) -> bool:
 def main() -> None:
     load_dotenv()
 
+    collector = WarningCollector()
+    logging.getLogger().addHandler(collector)
+
+    try:
+        _run()
+    except Exception as exc:
+        send_notification(
+            "[LBOpenShiftFinder] Sync FAILED",
+            f"The sync run failed with an unhandled exception.\n\n"
+            f"Error: {exc}\n\n"
+            f"Traceback:\n{traceback.format_exc()}\n\n"
+            f"Check your GitHub Actions logs for full details.",
+        )
+        raise
+    else:
+        if collector.messages:
+            send_notification(
+                "[LBOpenShiftFinder] Sync completed with warnings",
+                f"Sync completed at {datetime.now().isoformat()} but logged "
+                f"{len(collector.messages)} warning(s):\n\n"
+                + "\n".join(f"  • {m}" for m in collector.messages)
+                + "\n\nCheck your GitHub Actions logs for full details.",
+            )
+    finally:
+        logging.getLogger().removeHandler(collector)
+
+
+def _run() -> None:
     # Load required environment variables
     lb_username = os.environ["LB_USERNAME"]
     lb_password = os.environ["LB_PASSWORD"]
@@ -94,7 +124,7 @@ def main() -> None:
     available_shifts = []
     for s in open_shifts:
         if not s.start_time or not s.end_time:
-            logger.debug(f"  SKIP (no times): {s.label} {s.assignment} on {s.date}")
+            logger.warning(f"Skipping shift with no times: {s.label} {s.assignment} on {s.date}")
             continue
         conflict = conflicts_with_my_shifts(s.start_time, s.end_time, combined_my_shifts)
         if conflict:

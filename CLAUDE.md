@@ -19,6 +19,7 @@ src/
   ical_parser.py   — iCal feed parser + conflict detection logic
   calendar_sync.py — Google Calendar API (service account auth)
   main.py          — Orchestrator: fetch → diff → sync
+  notifier.py      — Email notifications (SMTP) for failures and warnings
   state.py         — JSON state persistence (load/save)
   models.py        — Dataclasses: Shift, OpenShift, SyncedShift, SyncState
 state/
@@ -142,6 +143,15 @@ Picked-up shifts are combined with iCal shifts for conflict checking (prevents d
 - `_str_to_bool(value)` — converts env var strings to bool (`"true"`, `"1"`, `"yes"`, `"on"`)
 - `_shift_has_started(shift)` — returns True if `start_time < now()` (protects ongoing + completed shifts)
 
+### Notification Flow (`src/notifier.py`)
+`main()` installs a `WarningCollector` (a `logging.Handler`) on the root logger before calling `_run()`. After `_run()` completes:
+- **On success with warnings**: sends a warning email listing all WARNING+ messages captured during the run
+- **On unhandled exception**: sends a failure email with the exception and full traceback, then re-raises so GitHub Actions still marks the run as failed
+
+A shift with no scraped times (previously silent DEBUG) is promoted to WARNING so it surfaces in notifications.
+
+`send_notification()` is a no-op when `NOTIFY_ENABLED` is false/unset or any required SMTP field is missing.
+
 ---
 
 ## State (`src/state.py` + `state/synced_shifts.json`)
@@ -201,6 +211,12 @@ git pull --rebase && git push
 | `OPEN_SHIFT_COLOR` | `2` | Google Calendar colorId for open shifts (Sage green) |
 | `PICKED_SHIFT_COLOR` | `9` | Google Calendar colorId for picked-up shifts (Blueberry blue) |
 | `SCHEDULED_SHIFT_COLOR` | `3` | Google Calendar colorId for scheduled shifts (Grape purple) |
+| `NOTIFY_ENABLED` | `false` | Send email notifications for failures and warnings |
+| `NOTIFY_EMAIL` | `""` | Recipient email address for notifications |
+| `SMTP_HOST` | `""` | SMTP server hostname (e.g. `smtp.gmail.com`) |
+| `SMTP_PORT` | `587` | SMTP port — 587 for STARTTLS, 465 for SSL |
+| `SMTP_USERNAME` | `""` | SMTP login username |
+| `SMTP_PASSWORD` | `""` | SMTP password or app password |
 
 **Google Calendar colorIds:** 1=Lavender, 2=Sage, 3=Grape, 4=Flamingo, 5=Banana, 6=Tangerine, 7=Peacock, 8=Graphite, 9=Blueberry, 10=Basil, 11=Tomato
 
