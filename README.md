@@ -4,10 +4,13 @@ Automatically finds open shifts on the Lightning Bolt (PerfectServe) schedule vi
 
 ## How It Works
 
-1. **Fetches your personal shifts** from your Lightning Bolt iCal subscription feed (up to 6 months out)
-2. **Scrapes open shifts** ("OPEN 1", "OPEN 2", etc.) from the LB Viewer using Playwright, advancing through months until no more open shifts are found
-3. **Filters out conflicts** — any open shift that overlaps with your schedule or doesn't leave at least 8 hours of rest between shifts is excluded
-4. **Syncs** available open shifts to a Google Calendar, adding new ones and removing stale ones
+1. **Fetches your personal shifts** from your Lightning Bolt iCal subscription feed (configurable lookahead, default 180 days)
+2. **Scrapes open shifts** ("OPEN 1", "OPEN 2", etc.) and **picked-up shifts** (open shifts taken by you, detected via `MY_NAME_PATTERN`) from the LB Viewer using Playwright, advancing through months until no more shifts are found
+3. **Filters out conflicts** — any open shift that overlaps with your schedule or doesn't leave at least 8 hours of rest (configurable) is excluded. Picked-up shifts also count as your schedule for this check.
+4. **Syncs three shift types** to a Google Calendar in distinct colors:
+   - **Open shifts** (available to pick up) — Sage green
+   - **Picked-up shifts** (shifts you've claimed) — Blueberry blue
+   - **Scheduled shifts** (your regular iCal shifts) — Grape purple
 5. **Runs automatically** via GitHub Actions (4x daily) or manually on-demand
 
 ## Setup
@@ -116,6 +119,13 @@ To **disable** automatic runs: Actions tab > click the workflow > `...` menu > *
 
 All configuration options can be set in your `.env` file (for local runs) or as GitHub secrets (for automated runs):
 
+### Scraper Options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LB_VIEW_NAME` | *(your org name)* | Substring of the sidebar view link clicked after login. Falls back to first available link if not found |
+| `MY_NAME_PATTERN` | `""` | Case-insensitive regex matching your name in the schedule, used to detect picked-up shifts (e.g. `(john\|jonathan)\s+doe`). Empty = no picked-up detection |
+
 ### Sync Options
 
 | Variable | Default | Description |
@@ -123,6 +133,9 @@ All configuration options can be set in your `.env` file (for local runs) or as 
 | `SYNC_OPEN_SHIFTS` | `true` | Sync available open shifts to calendar |
 | `SYNC_PICKED_SHIFTS` | `true` | Sync shifts you've picked up to calendar |
 | `SYNC_SCHEDULED_SHIFTS` | `true` | Sync your regular scheduled shifts (from iCal) to calendar |
+| `KEEP_PAST_SHIFTS` | `false` | When `true`, shifts that have already started are never removed — useful for payroll verification |
+| `EXCLUDED_SHIFT_LABELS` | `""` | Comma-separated iCal event labels to exclude from calendar sync (e.g. `Vacation`). These still block open shifts via conflict detection. |
+| `LOCAL_TIMEZONE` | `America/Chicago` | IANA timezone for all time comparisons and calendar events. Required to match correctly on GitHub Actions (which runs UTC) |
 | `MIN_REST_HOURS` | `8` | Minimum hours of rest required between shifts for conflict filtering |
 | `ICAL_LOOKAHEAD_DAYS` | `180` | How many days ahead to fetch from your iCal feed |
 
@@ -148,10 +161,17 @@ LB_ICAL_URL=https://lblite.lightning-bolt.com/ical/your-feed
 GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
 GOOGLE_CALENDAR_ID=you@gmail.com
 
+# Scraper (optional)
+LB_VIEW_NAME=My Hospital - Main Campus  # sidebar link text to click after login
+MY_NAME_PATTERN=(john|jonathan)\s+doe   # regex to detect your picked-up shifts
+
 # Sync options (optional)
+LOCAL_TIMEZONE=America/Chicago
+KEEP_PAST_SHIFTS=true        # Keep worked shifts for payroll verification
 SYNC_OPEN_SHIFTS=true
 SYNC_PICKED_SHIFTS=true
 SYNC_SCHEDULED_SHIFTS=false  # Don't sync regular shifts, only open/picked
+EXCLUDED_SHIFT_LABELS=Vacation,CME  # These won't appear on calendar but still block open shifts
 MIN_REST_HOURS=10            # Require 10 hours between shifts instead of 8
 ICAL_LOOKAHEAD_DAYS=90       # Only look 3 months ahead
 
@@ -184,7 +204,7 @@ An open shift is excluded if any of the following are true:
   - Example: Your shift ends at 5am → an open shift starting at 7am the same day is blocked (only 2 hours gap)
   - Example: An open shift ends at 7am → your shift starts at 7am → blocked (0 hours gap)
 
-The rest period can be adjusted via the `MIN_REST_HOURS` environment variable (see Configuration section).
+**`EXCLUDED_SHIFT_LABELS`** — iCal events with these labels (e.g. `Vacation`) are excluded from calendar sync, but they **still participate in conflict detection**. This means a vacation day will block open shifts that fall on that day, even though the vacation event itself won't appear on your calendar.
 
 ### Calendar Events
 
@@ -253,5 +273,5 @@ This opens a visible browser, automates the full navigation flow, enables "Show 
 
 - **Screenshots**: Every sync run saves screenshots to `screenshots/`. In CI, these are uploaded as artifacts (retained for 7 days) — check them under the Actions tab if a run fails.
 - **Debug logging**: Run with `python -m src.main` to see `FILTERED OUT` lines showing which shifts were excluded and why.
-- **State issues**: If the calendar gets out of sync, reset `state/synced_shifts.json` to `{"last_run": null, "synced_shifts": []}` and run again — all managed events will be re-created.
+- **State issues**: If the calendar gets out of sync, reset `state/synced_shifts.json` to `{"last_run": null, "synced_shifts": [], "picked_shifts": [], "scheduled_shifts": []}` and run again — all managed events will be re-created.
 - **Selector changes**: If LB updates their UI, selectors in `src/scraper.py` may break. Use recon mode to identify new selectors.
