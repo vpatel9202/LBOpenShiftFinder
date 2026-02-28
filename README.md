@@ -43,6 +43,8 @@ You need your personal iCal subscription URL from Lightning Bolt. This is used t
 
 The tool uses a Google service account (not personal OAuth) to manage calendar events. This allows it to run unattended in CI.
 
+> **Automated option:** If you have the [gcloud CLI](https://cloud.google.com/sdk/docs/install) installed, run `./scripts/setup_gcp.sh <project-id>` to complete steps 1–5 automatically. You still need to do step 6 (share the calendar) manually.
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project (or select an existing one)
 3. Enable the **Google Calendar API**:
@@ -58,6 +60,10 @@ The tool uses a Google service account (not personal OAuth) to manage calendar e
    - Go to the **Keys** tab
    - Click **Add Key > Create new key > JSON**
    - Download the JSON file — you'll need the contents for configuration
+   - Flatten it to a single line (required for `.env` and GitHub Secrets):
+     ```bash
+     python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin)))" < service-account-key.json
+     ```
 6. Share your Google Calendar with the service account:
    - Open [Google Calendar](https://calendar.google.com/)
    - Go to the target calendar's **Settings and sharing**
@@ -68,14 +74,16 @@ The tool uses a Google service account (not personal OAuth) to manage calendar e
    - In Calendar Settings, scroll to **Integrate calendar**
    - Copy the **Calendar ID** (for your primary calendar, it's your email address)
 
-Verify the setup works:
+Verify the setup works (performs a full read/write/delete test):
 ```bash
 python scripts/verify_google_setup.py
 ```
 
 ### 4. Configure Environment (Local Runs)
 
-Copy `.env.example` to `.env` and fill in your values:
+> **Automated option:** Run `python scripts/configure.py` for an interactive setup that prompts for each value, validates inputs, writes your `.env`, and optionally pushes secrets to GitHub Actions via the `gh` CLI.
+
+Copy `.env.example` to `.env` and fill in your values manually:
 
 ```bash
 cp .env.example .env
@@ -250,7 +258,9 @@ src/
   models.py          # Data classes (Shift, OpenShift, SyncedShift, SyncState)
   state.py           # State persistence (tracks synced shifts)
 scripts/
-  verify_google_setup.py   # Verifies service account can access calendar
+  setup_gcp.sh             # Automates GCP project + service account provisioning (requires gcloud)
+  configure.py             # Interactive setup: prompts for all config, writes .env, optional gh push
+  verify_google_setup.py   # End-to-end write test: create/read/delete a test calendar event
 state/
   synced_shifts.json       # Persisted sync state (auto-committed by CI)
 .github/workflows/
