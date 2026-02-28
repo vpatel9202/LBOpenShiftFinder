@@ -382,7 +382,7 @@ def _extract_open_shifts(page: Page) -> tuple[list[OpenShift], list[OpenShift]]:
     if not date_map:
         logger.error("No week headers found — cannot map cells to dates")
         _dump_html(page, "no_headers_error")
-        return shifts
+        return open_shifts, picked_shifts
 
     header_tops = sorted(date_map.keys())
 
