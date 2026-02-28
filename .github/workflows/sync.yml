@@ -45,6 +45,17 @@ jobs:
           LB_ICAL_URL: ${{ secrets.LB_ICAL_URL }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+          MY_NAME_PATTERN: ${{ secrets.MY_NAME_PATTERN }}
+          KEEP_PAST_SHIFTS: ${{ secrets.KEEP_PAST_SHIFTS }}
+          SYNC_OPEN_SHIFTS: ${{ secrets.SYNC_OPEN_SHIFTS }}
+          SYNC_PICKED_SHIFTS: ${{ secrets.SYNC_PICKED_SHIFTS }}
+          SYNC_SCHEDULED_SHIFTS: ${{ secrets.SYNC_SCHEDULED_SHIFTS }}
+          EXCLUDED_SHIFT_LABELS: ${{ secrets.EXCLUDED_SHIFT_LABELS }}
+          MIN_REST_HOURS: ${{ secrets.MIN_REST_HOURS }}
+          ICAL_LOOKAHEAD_DAYS: ${{ secrets.ICAL_LOOKAHEAD_DAYS }}
+          OPEN_SHIFT_COLOR: ${{ secrets.OPEN_SHIFT_COLOR }}
+          PICKED_SHIFT_COLOR: ${{ secrets.PICKED_SHIFT_COLOR }}
+          SCHEDULED_SHIFT_COLOR: ${{ secrets.SCHEDULED_SHIFT_COLOR }}
         run: python -m src.main
 
       - name: Upload debug screenshots
