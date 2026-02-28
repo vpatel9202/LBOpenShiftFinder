@@ -9,6 +9,7 @@ from datetime import datetime, time
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright, Page, Browser, TimeoutError as PwTimeout
+from zoneinfo import ZoneInfo
 
 from src.models import OpenShift
 
@@ -18,6 +19,7 @@ LB_LOGIN_URL = "https://lblite.lightning-bolt.com/login"
 SCREENSHOTS_DIR = Path(__file__).parent.parent / "screenshots"
 MY_NAME_PATTERN = os.getenv("MY_NAME_PATTERN", "")
 LB_VIEW_NAME = os.getenv("LB_VIEW_NAME", "BSW Hospital Medicine - Dallas")
+LOCAL_TIMEZONE = os.getenv("LOCAL_TIMEZONE", "America/Chicago")
 
 # =============================================================================
 # CSS SELECTORS
@@ -498,7 +500,7 @@ def _parse_date(date_text: str) -> str | None:
         try:
             dt = datetime.strptime(date_text, fmt)
             if dt.year == 1900:
-                dt = dt.replace(year=datetime.now().year)
+                dt = dt.replace(year=datetime.now(ZoneInfo(LOCAL_TIMEZONE)).year)
             return dt.strftime("%Y-%m-%d")
         except ValueError:
             continue
