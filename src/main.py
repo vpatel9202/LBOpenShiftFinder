@@ -23,6 +23,14 @@ def _str_to_bool(value: str) -> bool:
     return value.lower() in ("true", "1", "yes", "on")
 
 
+def _shift_has_ended(shift) -> bool:
+    """Return True if the shift's end time is in the past."""
+    try:
+        return datetime.fromisoformat(shift.end_time) < datetime.now()
+    except (ValueError, TypeError):
+        return False
+
+
 def main() -> None:
     load_dotenv()
 
@@ -37,13 +45,14 @@ def main() -> None:
     sync_open = _str_to_bool(os.getenv("SYNC_OPEN_SHIFTS", "true"))
     sync_picked = _str_to_bool(os.getenv("SYNC_PICKED_SHIFTS", "true"))
     sync_scheduled = _str_to_bool(os.getenv("SYNC_SCHEDULED_SHIFTS", "true"))
+    keep_past_shifts = _str_to_bool(os.getenv("KEEP_PAST_SHIFTS", "false"))
     excluded_labels = {
         label.strip().lower()
         for label in os.getenv("EXCLUDED_SHIFT_LABELS", "").split(",")
         if label.strip()
     }
 
-    logger.info(f"Sync config: open={sync_open}, picked={sync_picked}, scheduled={sync_scheduled}")
+    logger.info(f"Sync config: open={sync_open}, picked={sync_picked}, scheduled={sync_scheduled}, keep_past={keep_past_shifts}")
     if excluded_labels:
         logger.info(f"Excluding iCal labels from calendar sync: {excluded_labels}")
 
@@ -141,6 +150,19 @@ def main() -> None:
         scheduled_to_add = []
         scheduled_to_remove = state.scheduled_shifts
         scheduled_to_keep = []
+
+    # If KEEP_PAST_SHIFTS is enabled, rescue any already-ended shifts from the remove lists
+    if keep_past_shifts:
+        for remove_list, keep_list in [
+            (open_to_remove, open_to_keep),
+            (picked_to_remove, picked_to_keep),
+            (scheduled_to_remove, scheduled_to_keep),
+        ]:
+            past = [s for s in remove_list if _shift_has_ended(s)]
+            if past:
+                keep_list += past
+                for s in past:
+                    remove_list.remove(s)
 
     logger.info(f"Open shifts: add {len(open_to_add)}, remove {len(open_to_remove)}, keep {len(open_to_keep)}")
     logger.info(f"Picked shifts: add {len(picked_to_add)}, remove {len(picked_to_remove)}, keep {len(picked_to_keep)}")
