@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-02-28T13:00:13.373042+00:00",
+  "last_run": "2026-02-28T16:17:41.177462+00:00",
   "synced_shifts": [
     {
       "date": "2026-01-27",
@@ -437,46 +437,6 @@
       "google_event_id": "6goenfkumshbglks3k0gqjabbo"
     },
     {
-      "date": "2026-03-21",
-      "start_time": "2026-03-21T08:00:00",
-      "end_time": "2026-03-21T17:00:00",
-      "assignment": "Vacation",
-      "label": "Scheduled",
-      "google_event_id": "gui99pt5ot5265rcr4aa9ra7vk"
-    },
-    {
-      "date": "2026-03-22",
-      "start_time": "2026-03-22T08:00:00",
-      "end_time": "2026-03-22T17:00:00",
-      "assignment": "Vacation",
-      "label": "Scheduled",
-      "google_event_id": "3955jqak00ptfl2cjd4dgmjrps"
-    },
-    {
-      "date": "2026-03-23",
-      "start_time": "2026-03-23T08:00:00",
-      "end_time": "2026-03-23T17:00:00",
-      "assignment": "Vacation",
-      "label": "Scheduled",
-      "google_event_id": "4ql55up9vn8c4jq23de282ouvc"
-    },
-    {
-      "date": "2026-03-24",
-      "start_time": "2026-03-24T08:00:00",
-      "end_time": "2026-03-24T17:00:00",
-      "assignment": "Vacation",
-      "label": "Scheduled",
-      "google_event_id": "pc60jr5jk5b36tikkr21uop3n8"
-    },
-    {
-      "date": "2026-03-25",
-      "start_time": "2026-03-25T08:00:00",
-      "end_time": "2026-03-25T17:00:00",
-      "assignment": "Vacation",
-      "label": "Scheduled",
-      "google_event_id": "vfgfg9pvttl9dd4esev5hpa4tk"
-    },
-    {
       "date": "2026-03-26",
       "start_time": "2026-03-26T07:00:00",
       "end_time": "2026-03-26T17:00:00",
@@ -797,52 +757,20 @@
       "google_event_id": "ba5bdj74qd92jup4nki4eif5bc"
     },
     {
-      "date": "2026-05-27",
-      "start_time": "2026-05-27T08:00:00",
-      "end_time": "2026-05-27T17:00:00",
-      "assignment": "Vacation",
-      "label": "Scheduled",
-      "google_event_id": "ocb3henijo4540cgcmohbvdc0s"
-    },
-    {
-      "date": "2026-05-28",
-      "start_time": "2026-05-28T08:00:00",
-      "end_time": "2026-05-28T17:00:00",
-      "assignment": "Vacation",
-      "label": "Scheduled",
-      "google_event_id": "hgus8m6sdhuu7fhpcvve161ptc"
-    },
-    {
-      "date": "2026-05-29",
-      "start_time": "2026-05-29T08:00:00",
-      "end_time": "2026-05-29T17:00:00",
-      "assignment": "Vacation",
-      "label": "Scheduled",
-      "google_event_id": "tq93cgrdam026ees9pm6955jts"
-    },
-    {
-      "date": "2026-05-30",
-      "start_time": "2026-05-30T08:00:00",
-      "end_time": "2026-05-30T17:00:00",
-      "assignment": "Vacation",
-      "label": "Scheduled",
-      "google_event_id": "o5efh7t4no9vas515b8sp43310"
-    },
-    {
-      "date": "2026-05-31",
-      "start_time": "2026-05-31T08:00:00",
-      "end_time": "2026-05-31T17:00:00",
-      "assignment": "Vacation",
-      "label": "Scheduled",
-      "google_event_id": "615eh9grocvrk8lhlcj30b2hq8"
-    },
-    {
       "date": "2026-05-02",
       "start_time": "2026-05-02T15:00:00",
       "end_time": "2026-05-03T01:00:00",
       "assignment": "A3",
       "label": "Scheduled",
       "google_event_id": "68641ed8eo8gm2pg9hgob647qs"
+    },
+    {
+      "date": "2026-05-04",
+      "start_time": "2026-05-04T07:00:00",
+      "end_time": "2026-05-04T17:00:00",
+      "assignment": "R20",
+      "label": "Scheduled",
+      "google_event_id": "gcuo8d1urrqsnja3o6c880ne1o"
     }
   ]
 }
