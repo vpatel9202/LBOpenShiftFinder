@@ -49,9 +49,6 @@ SELECTORS = {
     # Checkbox items in the filter dropdown (after searching "Open")
     "filter_checkboxes": ".menu.open .scrollable .pointer.listitem .fa-checkbox",
 
-    # A neutral area to click to close the dropdown
-    "close_dropdown_click": ".spacer > div:nth-child(1)",
-
     # Month navigation: right arrow to go to next month
     "next_month_arrow": "#ContextRibbon i.fa:nth-child(2)",
 
@@ -201,10 +198,11 @@ def _navigate_to_open_shifts(page: Page) -> None:
         checkbox.click()
         page.wait_for_timeout(200)
 
-    # Step 7: Close the dropdown by clicking whitespace
+    # Step 7: Close the dropdown — same Escape pattern used for Settings dropdown,
+    # since the open menu overlays the grid spacer and blocks whitespace clicks
     logger.info("Closing filter dropdown...")
     page.wait_for_timeout(500)
-    page.click(SELECTORS["close_dropdown_click"])
+    page.keyboard.press("Escape")
     page.wait_for_timeout(1500)  # Wait for schedule to re-render
 
     logger.info("Navigation to open shifts view complete")
@@ -344,8 +342,8 @@ def _read_popup_times(page: Page, cell) -> tuple[str | None, str | None]:
         popup_text = popup.inner_text().strip()
         logger.debug(f"Popup text: {popup_text}")
 
-        # Close the popup by clicking elsewhere
-        page.click(SELECTORS["close_dropdown_click"])
+        # Close the popup
+        page.keyboard.press("Escape")
         page.wait_for_timeout(300)
 
         return popup_text, None  # Return raw text for parsing
