@@ -1,6 +1,150 @@
 {
-  "last_run": "2026-03-01T14:41:32.860605+00:00",
+  "last_run": "2026-03-01T16:18:29.229486+00:00",
   "synced_shifts": [
+    {
+      "date": "2026-03-15",
+      "start_time": "2026-03-15T07:00:00",
+      "end_time": "2026-03-15T17:00:00",
+      "assignment": "R29",
+      "label": "OPEN 1",
+      "google_event_id": "j7mb2d5dqf63d4sergss97cgs8"
+    },
+    {
+      "date": "2026-03-14",
+      "start_time": "2026-03-14T07:00:00",
+      "end_time": "2026-03-14T17:00:00",
+      "assignment": "Oncology Team APP - 1",
+      "label": "OPEN 1",
+      "google_event_id": "ggloik20qfhgob0mfho4jpknv8"
+    },
+    {
+      "date": "2026-04-01",
+      "start_time": "2026-04-01T09:00:00",
+      "end_time": "2026-04-01T19:00:00",
+      "assignment": "APP A-2",
+      "label": "OPEN 1",
+      "google_event_id": "3qnd7bbmgudeerjt5s2a2s6kho"
+    },
+    {
+      "date": "2026-03-31",
+      "start_time": "2026-03-31T21:00:00",
+      "end_time": "2026-04-01T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "iaf8p6t5guh7r98spdaau8p0js"
+    },
+    {
+      "date": "2026-04-10",
+      "start_time": "2026-04-10T09:00:00",
+      "end_time": "2026-04-10T19:00:00",
+      "assignment": "APP A-2",
+      "label": "OPEN 1",
+      "google_event_id": "4tbtuu5mva9ugklsnheoesq42s"
+    },
+    {
+      "date": "2026-04-11",
+      "start_time": "2026-04-11T09:00:00",
+      "end_time": "2026-04-11T19:00:00",
+      "assignment": "APP A-2",
+      "label": "OPEN 1",
+      "google_event_id": "69t1ggkdchi6a7s2bvtvc9s59s"
+    },
+    {
+      "date": "2026-04-12",
+      "start_time": "2026-04-12T09:00:00",
+      "end_time": "2026-04-12T19:00:00",
+      "assignment": "APP A-2",
+      "label": "OPEN 1",
+      "google_event_id": "ftehdms13io048o3sjlq7859tc"
+    },
+    {
+      "date": "2026-04-07",
+      "start_time": "2026-04-07T21:00:00",
+      "end_time": "2026-04-08T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "r1u5u837cqhb9q91cfg86ibm44"
+    },
+    {
+      "date": "2026-04-08",
+      "start_time": "2026-04-08T21:00:00",
+      "end_time": "2026-04-09T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "0dvg8fjsvh8ft2rkbmev8gl0jc"
+    },
+    {
+      "date": "2026-04-09",
+      "start_time": "2026-04-09T21:00:00",
+      "end_time": "2026-04-10T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "d15lmi19j1t3sf4d95kufqbr04"
+    },
+    {
+      "date": "2026-04-19",
+      "start_time": "2026-04-19T09:00:00",
+      "end_time": "2026-04-19T19:00:00",
+      "assignment": "APP A-2",
+      "label": "OPEN 1",
+      "google_event_id": "mng61ib1qrc36df60qbudgl4ik"
+    },
+    {
+      "date": "2026-04-18",
+      "start_time": "2026-04-18T21:00:00",
+      "end_time": "2026-04-19T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "de37n506evl03kafi75uhc3iv0"
+    },
+    {
+      "date": "2026-04-30",
+      "start_time": "2026-04-30T09:00:00",
+      "end_time": "2026-04-30T19:00:00",
+      "assignment": "APP A-2",
+      "label": "OPEN 1",
+      "google_event_id": "72mtfmq1c0b76o0odd3ulc2hp4"
+    },
+    {
+      "date": "2026-04-27",
+      "start_time": "2026-04-27T21:00:00",
+      "end_time": "2026-04-28T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "c5i8nmm6jumjj7h3net83qi54g"
+    },
+    {
+      "date": "2026-04-10",
+      "start_time": "2026-04-10T14:00:00",
+      "end_time": "2026-04-11T00:00:00",
+      "assignment": "APP A-3",
+      "label": "OPEN 1",
+      "google_event_id": "e9l3kk34p6uvjkvsn0kq9j4e8o"
+    },
+    {
+      "date": "2026-04-18",
+      "start_time": "2026-04-18T07:00:00",
+      "end_time": "2026-04-18T17:00:00",
+      "assignment": "Care Team APP - 1",
+      "label": "OPEN 1",
+      "google_event_id": "2khm7mghq2dn6s5b01r1j07670"
+    },
+    {
+      "date": "2026-04-19",
+      "start_time": "2026-04-19T07:00:00",
+      "end_time": "2026-04-19T17:00:00",
+      "assignment": "Care Team APP - 1",
+      "label": "OPEN 1",
+      "google_event_id": "faool2ok3p0n2d7o50fnqfg0e0"
+    },
+    {
+      "date": "2026-03-20",
+      "start_time": "2026-03-20T07:00:00",
+      "end_time": "2026-03-20T17:00:00",
+      "assignment": "R28",
+      "label": "OPEN 1",
+      "google_event_id": "9kkeuj2v4ejsmvbn3rp7ks9lbo"
+    },
     {
       "date": "2026-01-27",
       "start_time": "2026-01-27T07:00:00",
@@ -146,118 +290,6 @@
       "google_event_id": "hprnb0rqjrlo5iotmve7e8naj8"
     },
     {
-      "date": "2026-03-15",
-      "start_time": "2026-03-15T07:00:00",
-      "end_time": "2026-03-15T17:00:00",
-      "assignment": "R29",
-      "label": "OPEN 1",
-      "google_event_id": "j7mb2d5dqf63d4sergss97cgs8"
-    },
-    {
-      "date": "2026-03-14",
-      "start_time": "2026-03-14T07:00:00",
-      "end_time": "2026-03-14T17:00:00",
-      "assignment": "Oncology Team APP - 1",
-      "label": "OPEN 1",
-      "google_event_id": "ggloik20qfhgob0mfho4jpknv8"
-    },
-    {
-      "date": "2026-04-01",
-      "start_time": "2026-04-01T09:00:00",
-      "end_time": "2026-04-01T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "3qnd7bbmgudeerjt5s2a2s6kho"
-    },
-    {
-      "date": "2026-03-31",
-      "start_time": "2026-03-31T21:00:00",
-      "end_time": "2026-04-01T07:00:00",
-      "assignment": "APP PA",
-      "label": "OPEN 1",
-      "google_event_id": "iaf8p6t5guh7r98spdaau8p0js"
-    },
-    {
-      "date": "2026-04-10",
-      "start_time": "2026-04-10T09:00:00",
-      "end_time": "2026-04-10T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "4tbtuu5mva9ugklsnheoesq42s"
-    },
-    {
-      "date": "2026-04-11",
-      "start_time": "2026-04-11T09:00:00",
-      "end_time": "2026-04-11T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "69t1ggkdchi6a7s2bvtvc9s59s"
-    },
-    {
-      "date": "2026-04-12",
-      "start_time": "2026-04-12T09:00:00",
-      "end_time": "2026-04-12T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "ftehdms13io048o3sjlq7859tc"
-    },
-    {
-      "date": "2026-04-07",
-      "start_time": "2026-04-07T21:00:00",
-      "end_time": "2026-04-08T07:00:00",
-      "assignment": "APP PA",
-      "label": "OPEN 1",
-      "google_event_id": "r1u5u837cqhb9q91cfg86ibm44"
-    },
-    {
-      "date": "2026-04-08",
-      "start_time": "2026-04-08T21:00:00",
-      "end_time": "2026-04-09T07:00:00",
-      "assignment": "APP PA",
-      "label": "OPEN 1",
-      "google_event_id": "0dvg8fjsvh8ft2rkbmev8gl0jc"
-    },
-    {
-      "date": "2026-04-09",
-      "start_time": "2026-04-09T21:00:00",
-      "end_time": "2026-04-10T07:00:00",
-      "assignment": "APP PA",
-      "label": "OPEN 1",
-      "google_event_id": "d15lmi19j1t3sf4d95kufqbr04"
-    },
-    {
-      "date": "2026-04-19",
-      "start_time": "2026-04-19T09:00:00",
-      "end_time": "2026-04-19T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "mng61ib1qrc36df60qbudgl4ik"
-    },
-    {
-      "date": "2026-04-18",
-      "start_time": "2026-04-18T21:00:00",
-      "end_time": "2026-04-19T07:00:00",
-      "assignment": "APP PA",
-      "label": "OPEN 1",
-      "google_event_id": "de37n506evl03kafi75uhc3iv0"
-    },
-    {
-      "date": "2026-04-30",
-      "start_time": "2026-04-30T09:00:00",
-      "end_time": "2026-04-30T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "72mtfmq1c0b76o0odd3ulc2hp4"
-    },
-    {
-      "date": "2026-04-27",
-      "start_time": "2026-04-27T21:00:00",
-      "end_time": "2026-04-28T07:00:00",
-      "assignment": "APP PA",
-      "label": "OPEN 1",
-      "google_event_id": "c5i8nmm6jumjj7h3net83qi54g"
-    },
-    {
       "date": "2026-02-21",
       "start_time": "2026-02-21T07:00:00",
       "end_time": "2026-02-21T17:00:00",
@@ -306,48 +338,16 @@
       "google_event_id": "3anf9ehtt794o2i7g8ngf17so4"
     },
     {
-      "date": "2026-04-10",
-      "start_time": "2026-04-10T14:00:00",
-      "end_time": "2026-04-11T00:00:00",
-      "assignment": "APP A-3",
-      "label": "OPEN 1",
-      "google_event_id": "e9l3kk34p6uvjkvsn0kq9j4e8o"
-    },
-    {
-      "date": "2026-04-18",
-      "start_time": "2026-04-18T07:00:00",
-      "end_time": "2026-04-18T17:00:00",
-      "assignment": "Care Team APP - 1",
-      "label": "OPEN 1",
-      "google_event_id": "2khm7mghq2dn6s5b01r1j07670"
-    },
-    {
-      "date": "2026-04-19",
-      "start_time": "2026-04-19T07:00:00",
-      "end_time": "2026-04-19T17:00:00",
-      "assignment": "Care Team APP - 1",
-      "label": "OPEN 1",
-      "google_event_id": "faool2ok3p0n2d7o50fnqfg0e0"
-    },
-    {
       "date": "2026-03-20",
       "start_time": "2026-03-20T07:00:00",
       "end_time": "2026-03-20T17:00:00",
-      "assignment": "R28",
+      "assignment": "Oncology Team APP - 1",
       "label": "OPEN 1",
-      "google_event_id": "9kkeuj2v4ejsmvbn3rp7ks9lbo"
+      "google_event_id": "migtpq031liij95dmpa96tk6l8"
     }
   ],
   "picked_shifts": [],
   "scheduled_shifts": [
-    {
-      "date": "2026-02-28",
-      "start_time": "2026-02-28T07:00:00",
-      "end_time": "2026-02-28T17:00:00",
-      "assignment": "R20",
-      "label": "Scheduled",
-      "google_event_id": "o0v1qi3vm7rqq4t1r1qfv4gdg4"
-    },
     {
       "date": "2026-03-02",
       "start_time": "2026-03-02T19:00:00",
@@ -779,6 +779,14 @@
       "assignment": "T2",
       "label": "Scheduled",
       "google_event_id": "afrce05c34f8sl5b2cqak7d8a0"
+    },
+    {
+      "date": "2026-02-28",
+      "start_time": "2026-02-28T07:00:00",
+      "end_time": "2026-02-28T17:00:00",
+      "assignment": "R20",
+      "label": "Scheduled",
+      "google_event_id": "o0v1qi3vm7rqq4t1r1qfv4gdg4"
     }
   ]
 }
