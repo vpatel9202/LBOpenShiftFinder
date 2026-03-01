@@ -63,7 +63,7 @@ SyncState       # Full state: last_run + three lists of SyncedShift
 1. **LB is a SPA** — never use `networkidle`, always use element-based waits
 2. **WeekContainer parent has height/width: 0px** — use `state="attached"` not the default `visible`
 3. **CSS checkboxes** — `#show_times` input is visually hidden, must use `page.evaluate("el => el.click()")` or click the label; never Playwright `.click()` on hidden inputs
-4. **Settings dropdown covers `.spacer`** — use `page.keyboard.press("Escape")` to close, not click on spacer
+4. **All dropdowns cover `.spacer`** — use `page.keyboard.press("Escape")` to close both the Settings dropdown and the Filter Personnel dropdown; never click `.spacer > div:nth-child(1)` while a menu is open (it times out because the open menu overlays it)
 5. **Filter personnel button** — selector is `div:nth-child(2) > div:nth-child(1)` (2nd child in flex row); `div:nth-child(1)` is the settings gear instead
 
 ### Grid DOM Structure
