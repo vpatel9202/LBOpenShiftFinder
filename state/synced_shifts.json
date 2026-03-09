@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-03-08T20:17:15.314332+00:00",
+  "last_run": "2026-03-09T01:54:13.677232+00:00",
   "synced_shifts": [
     {
       "date": "2026-03-15",
@@ -168,6 +168,14 @@
       "assignment": "Oncology Team APP - 2",
       "label": "OPEN 1",
       "google_event_id": "rrpd2m8f9mtm0nkn7b57u987v0"
+    },
+    {
+      "date": "2026-03-07",
+      "start_time": "2026-03-07T07:00:00",
+      "end_time": "2026-03-07T17:00:00",
+      "assignment": "APP A-1B",
+      "label": "OPEN 1",
+      "google_event_id": "5g5f7gthi2q1uvmfi5juk1d83g"
     },
     {
       "date": "2026-01-27",
@@ -370,24 +378,24 @@
       "google_event_id": "irc73mcc1gkb5emr58h4o18vuo"
     },
     {
-      "date": "2026-03-07",
-      "start_time": "2026-03-07T07:00:00",
-      "end_time": "2026-03-07T17:00:00",
-      "assignment": "APP A-1B",
+      "date": "2026-03-08",
+      "start_time": "2026-03-08T07:00:00",
+      "end_time": "2026-03-08T17:00:00",
+      "assignment": "R29",
       "label": "OPEN 1",
-      "google_event_id": "5g5f7gthi2q1uvmfi5juk1d83g"
-    }
-  ],
-  "picked_shifts": [],
-  "scheduled_shifts": [
+      "google_event_id": "qseg5gsmnf7tu7eccngl09tit4"
+    },
     {
       "date": "2026-03-08",
       "start_time": "2026-03-08T07:00:00",
       "end_time": "2026-03-08T17:00:00",
-      "assignment": "R11",
-      "label": "Scheduled",
-      "google_event_id": "8fomrfmmvf82g4m63af8e5p7qg"
-    },
+      "assignment": "Oncology Team APP - 1",
+      "label": "OPEN 1",
+      "google_event_id": "q3ogo3jjksqscfklro1mg8ltno"
+    }
+  ],
+  "picked_shifts": [],
+  "scheduled_shifts": [
     {
       "date": "2026-03-11",
       "start_time": "2026-03-11T15:00:00",
@@ -763,6 +771,14 @@
       "assignment": "R12",
       "label": "Scheduled",
       "google_event_id": "4q0adujqumvisd11559pf596ho"
+    },
+    {
+      "date": "2026-03-08",
+      "start_time": "2026-03-08T07:00:00",
+      "end_time": "2026-03-08T17:00:00",
+      "assignment": "R11",
+      "label": "Scheduled",
+      "google_event_id": "8fomrfmmvf82g4m63af8e5p7qg"
     },
     {
       "date": "2026-03-07",
