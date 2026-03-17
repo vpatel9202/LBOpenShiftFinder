@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-03-16T20:30:24.938559+00:00",
+  "last_run": "2026-03-17T01:53:28.452489+00:00",
   "synced_shifts": [
     {
       "date": "2026-03-15",
@@ -266,6 +266,30 @@
       "google_event_id": "ic76oqd1g05l8sgvn02237nbao"
     },
     {
+      "date": "2026-03-13",
+      "start_time": "2026-03-13T09:00:00",
+      "end_time": "2026-03-13T19:00:00",
+      "assignment": "APP A-2",
+      "label": "OPEN 1",
+      "google_event_id": "ofb8rgu32shr6pi3hg7jvvi8ko"
+    },
+    {
+      "date": "2026-03-12",
+      "start_time": "2026-03-12T07:00:00",
+      "end_time": "2026-03-12T17:00:00",
+      "assignment": "Oncology Team APP - 1",
+      "label": "OPEN 1",
+      "google_event_id": "ugg4s87pn7v32dt33dvut6spg8"
+    },
+    {
+      "date": "2026-03-13",
+      "start_time": "2026-03-13T07:00:00",
+      "end_time": "2026-03-13T17:00:00",
+      "assignment": "Oncology Team APP - 1",
+      "label": "OPEN 1",
+      "google_event_id": "8pch30ktj2igmqvop6ijh82oms"
+    },
+    {
       "date": "2026-01-27",
       "start_time": "2026-01-27T07:00:00",
       "end_time": "2026-01-27T17:00:00",
@@ -466,40 +490,24 @@
       "google_event_id": "irc73mcc1gkb5emr58h4o18vuo"
     },
     {
-      "date": "2026-03-13",
-      "start_time": "2026-03-13T09:00:00",
-      "end_time": "2026-03-13T19:00:00",
-      "assignment": "APP A-2",
+      "date": "2026-03-16",
+      "start_time": "2026-03-16T07:00:00",
+      "end_time": "2026-03-16T17:00:00",
+      "assignment": "R28",
       "label": "OPEN 1",
-      "google_event_id": "ofb8rgu32shr6pi3hg7jvvi8ko"
+      "google_event_id": "lv9i9rqi40g7qrn0a29tm5m940"
     },
-    {
-      "date": "2026-03-12",
-      "start_time": "2026-03-12T07:00:00",
-      "end_time": "2026-03-12T17:00:00",
-      "assignment": "Oncology Team APP - 1",
-      "label": "OPEN 1",
-      "google_event_id": "ugg4s87pn7v32dt33dvut6spg8"
-    },
-    {
-      "date": "2026-03-13",
-      "start_time": "2026-03-13T07:00:00",
-      "end_time": "2026-03-13T17:00:00",
-      "assignment": "Oncology Team APP - 1",
-      "label": "OPEN 1",
-      "google_event_id": "8pch30ktj2igmqvop6ijh82oms"
-    }
-  ],
-  "picked_shifts": [],
-  "scheduled_shifts": [
     {
       "date": "2026-03-16",
       "start_time": "2026-03-16T07:00:00",
       "end_time": "2026-03-16T17:00:00",
-      "assignment": "R1",
-      "label": "Scheduled",
-      "google_event_id": "v5sef1l3cnajiohclid6g5ggbk"
-    },
+      "assignment": "R29",
+      "label": "OPEN 1",
+      "google_event_id": "oitnkb55eu6na1eain51aioon4"
+    }
+  ],
+  "picked_shifts": [],
+  "scheduled_shifts": [
     {
       "date": "2026-03-17",
       "start_time": "2026-03-17T07:00:00",
@@ -843,6 +851,14 @@
       "assignment": "R12",
       "label": "Scheduled",
       "google_event_id": "4q0adujqumvisd11559pf596ho"
+    },
+    {
+      "date": "2026-03-16",
+      "start_time": "2026-03-16T07:00:00",
+      "end_time": "2026-03-16T17:00:00",
+      "assignment": "R1",
+      "label": "Scheduled",
+      "google_event_id": "v5sef1l3cnajiohclid6g5ggbk"
     },
     {
       "date": "2026-03-11",
