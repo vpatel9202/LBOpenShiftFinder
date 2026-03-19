@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from playwright.sync_api import sync_playwright, Page, Browser, TimeoutError as PwTimeout
 
-from src.scraper import _login, _take_screenshot, _dump_html
+from src.scraper import _login, _take_screenshot, _dump_html, SCREENSHOTS_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -209,6 +211,10 @@ def _switch_to_app_schedule(page: Page, app_schedule_name: str) -> None:
 
     # Wait for grid to re-render
     page.wait_for_timeout(2000)
+    try:
+        page.wait_for_selector(TRIAGE_SELECTORS["grid_container_fallback"], timeout=10000, state="attached")
+    except PwTimeout:
+        logger.warning("Grid container not found after switching to APP schedule — proceeding anyway")
     logger.info("Switch to APP schedule complete")
 
 
@@ -249,6 +255,10 @@ def _switch_to_md_schedule(page: Page, md_schedule_name: str) -> None:
             return
 
     page.wait_for_timeout(2000)
+    try:
+        page.wait_for_selector(TRIAGE_SELECTORS["grid_container_fallback"], timeout=10000, state="attached")
+    except PwTimeout:
+        logger.warning("Grid container not found after switching to MD schedule — proceeding anyway")
     logger.info("Switch to MD schedule complete")
 
 
@@ -284,6 +294,10 @@ def _navigate_next_day(page: Page) -> None:
         logger.warning("Could not find next-day arrow — page may not have advanced")
 
     page.wait_for_timeout(2000)  # Wait for day transition to complete
+    try:
+        page.wait_for_selector(TRIAGE_SELECTORS["grid_container_fallback"], timeout=10000, state="attached")
+    except PwTimeout:
+        logger.warning("Grid container not found after navigating to next day — proceeding anyway")
 
 
 # =============================================================================
@@ -340,7 +354,6 @@ def _parse_tooltip(tooltip_text: str) -> tuple[str | None, str | None, str | Non
     start_time: str | None = None
     end_time: str | None = None
 
-    import re
     time_match = re.search(
         r"(\d{1,2}:\d{2}\s*(?:am|pm|AM|PM)?)\s*[-–]\s*(\d{1,2}:\d{2}\s*(?:am|pm|AM|PM)?)",
         time_line,
@@ -541,34 +554,6 @@ def _process_row(
             else:
                 time_groups[time_key] = [provider_name]
 
-            # Check for teaching note on this slot (only when scan_all_for_notes)
-            if scan_all_for_notes and note_text:
-                teaching_label = _classify_note(note_text)
-                if teaching_label:
-                    shifts.append(TriageShift(
-                        label=teaching_label,
-                        providers=[provider_name],
-                        start_time=start_time or "",
-                        end_time=end_time or "",
-                        source=source,
-                    ))
-                    logger.debug(f"Teaching shift detected: {teaching_label} — {provider_name}")
-            elif scan_all_for_notes and _has_note_icon(slot):
-                # Note icon present but tooltip didn't give us line 3+ text — re-hover
-                tooltip_text2 = _get_tooltip_text(page, slot)
-                if tooltip_text2:
-                    _, _, pname2, note_text2 = _parse_tooltip(tooltip_text2)
-                    if note_text2:
-                        teaching_label = _classify_note(note_text2)
-                        if teaching_label and pname2:
-                            shifts.append(TriageShift(
-                                label=teaching_label,
-                                providers=[pname2],
-                                start_time=start_time or "",
-                                end_time=end_time or "",
-                                source=source,
-                            ))
-
         # Convert time_groups into TriageShift entries
         for (start_time, end_time), providers in time_groups.items():
             shifts.append(TriageShift(
@@ -642,8 +627,6 @@ def scrape_triage_schedule(
         TriageSchedule with all extracted shifts. The date field is set to
         today's date (the "start" of the 7am–7am window).
     """
-    from zoneinfo import ZoneInfo
-
     today = datetime.now(ZoneInfo(LOCAL_TIMEZONE)).strftime("%Y-%m-%d")
 
     with sync_playwright() as p:
@@ -739,12 +722,12 @@ def scrape_triage_schedule(
         except PwTimeout as e:
             logger.error(f"Timeout during triage scraping: {e}")
             _take_screenshot(page, "triage_error_timeout")
-            _dump_html(page, "triage_error_timeout", None)
+            _dump_html(page, "triage_error_timeout")
             raise
         except Exception as e:
             logger.error(f"Error during triage scraping: {e}")
             _take_screenshot(page, "triage_error_general")
-            _dump_html(page, "triage_error_general", None)
+            _dump_html(page, "triage_error_general")
             raise
         finally:
             browser.close()
@@ -766,6 +749,7 @@ def run_triage_recon(username: str, password: str) -> None:
     print("=" * 70)
     print("The browser will navigate step-by-step through the login and")
     print("Today's Schedule flow, pausing for inspection at each stage.")
+    print(f"Screenshots/HTML will be saved to: {SCREENSHOTS_DIR.resolve()}")
     print("=" * 70 + "\n")
 
     with sync_playwright() as p:
