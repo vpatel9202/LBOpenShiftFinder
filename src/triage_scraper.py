@@ -776,6 +776,7 @@ def run_triage_recon(username: str, password: str) -> None:
         print("[STEP 1] Logging in...")
         _login(page, username, password)
         _take_screenshot(page, "triage_recon_01_after_login")
+        _dump_html(page, "triage_recon_01_after_login")
         print("  Login successful.")
         input("  Press Enter to continue to Today's Schedule navigation...")
 
@@ -797,6 +798,7 @@ def run_triage_recon(username: str, password: str) -> None:
         print("[STEP 4] Extracting all visible rows (no label filter)...")
         _recon_extract_all(page)
         _take_screenshot(page, "triage_recon_04_extracted")
+        _dump_html(page, "triage_recon_04_extraction")
         input("  Press Enter to close browser...")
 
         browser.close()
