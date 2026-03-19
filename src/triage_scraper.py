@@ -46,9 +46,11 @@ TRIAGE_SELECTORS = {
     # Schedule-type dropdown in context ribbon (opens sidebar to switch MD/APP)
     "schedule_type_dropdown": "#ContextRibbon div.ContextRibbonItem.today-template div.ribbon-text.no-mobile",
 
-    # Sidebar items in the schedule-type picker
-    "schedule_type_items": ".Dialog.isTop a",
-    "schedule_type_fallback": "div.Item:nth-child(2) > div:nth-child(1) > div:nth-child(1)",
+    # Schedule-type picker items — confirmed DOM: .Dialog.isTop .List .Item (div, not <a>)
+    # Name text is in .name child; click target is .view-link inside each non-current item
+    "schedule_type_items": ".Dialog.isTop .List .Item",
+    "schedule_type_item_name": ".name",
+    "schedule_type_item_click": ".view-link",  # clickable child; current item uses .view-details
 
     # Day navigation arrows
     "next_day_primary": "#ContextRibbon i.fa-angle-right",
@@ -168,6 +170,46 @@ def _navigate_to_today_schedule(page: Page) -> None:
     logger.info("Navigation to Today's Schedule complete")
 
 
+def _click_schedule_item(page: Page, schedule_name: str, fallback_index: int = 0) -> bool:
+    """Find a schedule picker item by its .name text and click its .view-link child.
+
+    Args:
+        page: Playwright page object (schedule dropdown must already be open).
+        schedule_name: Substring to match against .name text content.
+        fallback_index: Index of .Item to click if no text match is found.
+
+    Returns:
+        True if a text match was found and clicked; False if fallback was used or no items found.
+    """
+    items = page.query_selector_all(TRIAGE_SELECTORS["schedule_type_items"])
+
+    for item in items:
+        name_el = item.query_selector(TRIAGE_SELECTORS["schedule_type_item_name"])
+        text = name_el.inner_text().strip() if name_el else item.inner_text().strip()
+        if schedule_name.lower() in text.lower():
+            logger.info(f"Clicked schedule item: '{text}'")
+            click_target = item.query_selector(TRIAGE_SELECTORS["schedule_type_item_click"]) or item
+            click_target.click()
+            return True
+
+    # Fallback: log available names and click by index
+    available = [
+        (i.query_selector(TRIAGE_SELECTORS["schedule_type_item_name"]) or i).inner_text().strip()
+        for i in items
+    ]
+    logger.warning(
+        f"Could not find schedule matching '{schedule_name}'. "
+        f"Available: {available}. Falling back to index {fallback_index}."
+    )
+    if items:
+        idx = min(fallback_index, len(items) - 1)
+        click_target = items[idx].query_selector(TRIAGE_SELECTORS["schedule_type_item_click"]) or items[idx]
+        click_target.click()
+    else:
+        logger.warning("No schedule type items found; cannot switch schedule")
+    return False
+
+
 def _switch_to_app_schedule(page: Page, app_schedule_name: str) -> None:
     """Switch the Today's Schedule view from MD to APP schedule.
 
@@ -185,39 +227,12 @@ def _switch_to_app_schedule(page: Page, app_schedule_name: str) -> None:
     logger.info(f"Switching to APP schedule: '{app_schedule_name}'...")
     page.wait_for_selector(TRIAGE_SELECTORS["schedule_type_dropdown"], timeout=10000)
     page.click(TRIAGE_SELECTORS["schedule_type_dropdown"])
-    page.wait_for_timeout(1000)  # Wait for sidebar to open
+    page.wait_for_selector(TRIAGE_SELECTORS["schedule_type_items"], timeout=5000, state="attached")
 
-    # Find all items in the sidebar and match by text
-    items = page.query_selector_all(TRIAGE_SELECTORS["schedule_type_items"])
-    clicked = False
-    for item in items:
-        text = item.inner_text().strip()
-        if app_schedule_name.lower() in text.lower():
-            logger.info(f"Found matching schedule type: '{text}'")
-            item.click()
-            clicked = True
-            break
+    if not _click_schedule_item(page, app_schedule_name, fallback_index=1):
+        logger.warning(f"Could not find APP schedule '{app_schedule_name}' — schedule may not have switched")
+        return
 
-    if not clicked:
-        # Fallback: click the 2nd item
-        available = [i.inner_text().strip() for i in items]
-        logger.warning(
-            f"Could not find schedule matching '{app_schedule_name}'. "
-            f"Available: {available}. Falling back to 2nd item."
-        )
-        fallback = page.query_selector(TRIAGE_SELECTORS["schedule_type_fallback"])
-        if fallback:
-            fallback.click()
-        elif len(items) > 1:
-            items[1].click()
-        elif items:
-            logger.warning("Only one schedule type item found; clicking it as last resort")
-            items[0].click()
-        else:
-            logger.warning("No schedule type items found; cannot switch schedule")
-            return
-
-    # Wait for grid to re-render with all rows
     _wait_for_rows_stable(page)
     logger.info("Switch to APP schedule complete")
 
@@ -234,29 +249,11 @@ def _switch_to_md_schedule(page: Page, md_schedule_name: str) -> None:
     logger.info(f"Switching back to MD schedule: '{md_schedule_name}'...")
     page.wait_for_selector(TRIAGE_SELECTORS["schedule_type_dropdown"], timeout=10000)
     page.click(TRIAGE_SELECTORS["schedule_type_dropdown"])
-    page.wait_for_timeout(1000)
+    page.wait_for_selector(TRIAGE_SELECTORS["schedule_type_items"], timeout=5000, state="attached")
 
-    items = page.query_selector_all(TRIAGE_SELECTORS["schedule_type_items"])
-    clicked = False
-    for item in items:
-        text = item.inner_text().strip()
-        if md_schedule_name.lower() in text.lower():
-            logger.info(f"Found matching MD schedule type: '{text}'")
-            item.click()
-            clicked = True
-            break
-
-    if not clicked:
-        available = [i.inner_text().strip() for i in items]
-        logger.warning(
-            f"Could not find MD schedule matching '{md_schedule_name}'. "
-            f"Available: {available}. Falling back to first item."
-        )
-        if items:
-            items[0].click()
-        else:
-            logger.warning("No schedule type items found; cannot switch to MD schedule")
-            return
+    if not _click_schedule_item(page, md_schedule_name, fallback_index=0):
+        logger.warning(f"Could not find MD schedule '{md_schedule_name}' — schedule may not have switched")
+        return
 
     _wait_for_rows_stable(page)
     logger.info("Switch to MD schedule complete")
@@ -672,11 +669,12 @@ def scrape_triage_schedule(
                 logger.info("No MD schedule name provided; clicking first schedule-type item...")
                 page.wait_for_selector(TRIAGE_SELECTORS["schedule_type_dropdown"], timeout=10000)
                 page.click(TRIAGE_SELECTORS["schedule_type_dropdown"])
-                page.wait_for_timeout(1000)
+                page.wait_for_selector(TRIAGE_SELECTORS["schedule_type_items"], timeout=5000, state="attached")
                 items = page.query_selector_all(TRIAGE_SELECTORS["schedule_type_items"])
                 if items:
-                    items[0].click()
-                page.wait_for_timeout(2000)
+                    fallback_el = items[0].query_selector(TRIAGE_SELECTORS["schedule_type_item_click"]) or items[0]
+                    fallback_el.click()
+                _wait_for_rows_stable(page)
 
             _take_screenshot(page, "triage_07_next_day_md")
 
@@ -777,6 +775,56 @@ def run_triage_recon(username: str, password: str) -> None:
         _recon_extract_all(page)
         _take_screenshot(page, "triage_recon_04_extracted")
         _dump_html(page, "triage_recon_04_extraction")
+        input("  Press Enter to open schedule dropdown for DOM inspection...")
+
+        # Step 4b: Open the schedule-type dropdown and dump HTML while it's open
+        print("[STEP 4b] Opening schedule-type dropdown (capturing live DOM)...")
+        try:
+            page.wait_for_selector(TRIAGE_SELECTORS["schedule_type_dropdown"], timeout=10000)
+            page.click(TRIAGE_SELECTORS["schedule_type_dropdown"])
+            page.wait_for_timeout(1000)
+            _take_screenshot(page, "triage_recon_04b_dropdown_open")
+            _dump_html(page, "triage_recon_04b_dropdown_open")
+            print("  Dropdown opened — inspect triage_recon_04b_dropdown_open.html for item selectors")
+            # Print any text found via current selector
+            items = page.query_selector_all(TRIAGE_SELECTORS["schedule_type_items"])
+            print(f"  Selector '{TRIAGE_SELECTORS['schedule_type_items']}' found {len(items)} item(s):")
+            for item in items:
+                name_el = item.query_selector(TRIAGE_SELECTORS["schedule_type_item_name"])
+                name = name_el.inner_text().strip() if name_el else item.inner_text().strip()
+                print(f"    {name!r}")
+        except Exception as e:
+            print(f"  ERROR opening dropdown: {e}")
+        # Close the dialog by clicking its X button (more reliable than Escape)
+        try:
+            page.click(".Dialog.isTop .title-close")
+        except Exception:
+            page.keyboard.press("Escape")
+        # Wait for the DialogContainer to lose its 'active' class
+        try:
+            page.wait_for_function(
+                "!document.querySelector('.DialogContainer.active')",
+                timeout=3000,
+            )
+        except Exception:
+            page.wait_for_timeout(1500)
+        input("  Press Enter to switch to APP schedule...")
+
+        # Step 5: Switch to APP schedule and print row labels
+        app_schedule_name = os.getenv("TRIAGE_APP_SCHEDULE_NAME", "BSW Hospital Medicine Dallas APP")
+        print(f"[STEP 5] Switching to APP schedule ('{app_schedule_name}')...")
+        _switch_to_app_schedule(page, app_schedule_name)
+        _take_screenshot(page, "triage_recon_05_app_schedule")
+        _dump_html(page, "triage_recon_05_app_schedule")
+        print("  APP schedule loaded. Row labels:")
+        _print_row_labels(page)
+        input("  Press Enter to extract all APP rows...")
+
+        # Step 6: Full extraction on APP schedule
+        print("[STEP 6] Extracting all visible APP rows (no label filter)...")
+        _recon_extract_all(page)
+        _take_screenshot(page, "triage_recon_06_app_extracted")
+        _dump_html(page, "triage_recon_06_app_extraction")
         input("  Press Enter to close browser...")
 
         browser.close()
