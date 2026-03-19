@@ -1,0 +1,68 @@
+name: Generate Triage Report
+
+on:
+  schedule:
+    # Run once daily at 6:30am CT (UTC-6 = +6hrs, UTC-5 during DST = +5hrs)
+    # Using UTC time that approximates CT across both standard and daylight time
+    - cron: "30 12 * * *"  # ~6:30am CT (during CST)
+  workflow_dispatch:  # Manual trigger
+
+permissions: {}
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('requirements.txt') }}
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Run triage
+        env:
+          LB_USERNAME: ${{ secrets.LB_USERNAME }}
+          LB_PASSWORD: ${{ secrets.LB_PASSWORD }}
+          TRIAGE_ENABLED: ${{ secrets.TRIAGE_ENABLED }}
+          TRIAGE_MD_SHIFTS: ${{ secrets.TRIAGE_MD_SHIFTS }}
+          TRIAGE_APP_SHIFTS: ${{ secrets.TRIAGE_APP_SHIFTS }}
+          TRIAGE_APP_SCHEDULE_NAME: ${{ secrets.TRIAGE_APP_SCHEDULE_NAME }}
+          TRIAGE_HOSPITAL_NAME: ${{ secrets.TRIAGE_HOSPITAL_NAME }}
+          TRIAGE_SHIFT_RESPONSIBILITIES: ${{ secrets.TRIAGE_SHIFT_RESPONSIBILITIES }}
+          TRIAGE_STATIC_EMAILS: ${{ secrets.TRIAGE_STATIC_EMAILS }}
+          TRIAGE_SHIFT_RECIPIENTS: ${{ secrets.TRIAGE_SHIFT_RECIPIENTS }}
+          TRIAGE_NAME_EMAIL_MAP: ${{ secrets.TRIAGE_NAME_EMAIL_MAP }}
+          LOCAL_TIMEZONE: ${{ secrets.LOCAL_TIMEZONE }}
+          NOTIFY_ENABLED: ${{ secrets.NOTIFY_ENABLED }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        run: python -m src.triage_main
+
+      - name: Upload debug screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshots
+          path: screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
