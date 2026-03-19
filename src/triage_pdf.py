@@ -7,6 +7,7 @@ import traceback
 from datetime import datetime
 
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 
 from src.triage_scraper import TriageSchedule, TriageShift
 
@@ -78,7 +79,11 @@ def _draw_row(
 
     All cells in the row share the same height (sized to the tallest cell).
     """
-    y0 = pdf.get_y()
+    # Guard against page break mid-row: if there's not even one line's worth of
+    # space left, force a new page before we capture y0.
+    if pdf.get_y() + LINE_H > pdf.h - pdf.b_margin:
+        pdf.add_page()
+
     x0 = pdf.l_margin
 
     # Measure the height needed for each cell to determine the row height
@@ -87,6 +92,12 @@ def _draw_row(
         lines = pdf.multi_cell(w, LINE_H, text, dry_run=True, output="LINES")
         max_lines = max(max_lines, len(lines))
     row_h = max_lines * LINE_H
+
+    # If the full row won't fit, move to a new page before drawing
+    if pdf.get_y() + row_h > pdf.h - pdf.b_margin:
+        pdf.add_page()
+
+    y0 = pdf.get_y()
 
     # Draw each cell at the correct x position
     for i, (text, w) in enumerate(zip(texts, widths)):
@@ -129,11 +140,11 @@ def _format_date(date_str: str) -> str:
 
 
 def _format_time_range(start: str, end: str) -> str:
-    """Return 'start – end' with em dash, handling empty strings gracefully."""
+    """Return 'start - end' with hyphen, handling empty strings gracefully."""
     start = (start or "").strip()
     end = (end or "").strip()
     if start and end:
-        return f"{start} \u2013 {end}"
+        return f"{start} - {end}"
     if start:
         return start
     if end:
@@ -204,11 +215,11 @@ def generate_triage_pdf(
         # ----------------------------------------------------------------
         # Line 1: bold 14pt title
         pdf.set_font("Helvetica", style="B", size=14)
-        pdf.cell(0, 8, f"{hospital_name} \u2014 Triage Sheet", ln=True, align="L")
+        pdf.cell(0, 8, f"{hospital_name} - Triage Sheet", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="L")
 
         # Line 2: regular 11pt date
         pdf.set_font("Helvetica", size=11)
-        pdf.cell(0, 7, _format_date(schedule.date), ln=True, align="L")
+        pdf.cell(0, 7, _format_date(schedule.date), new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="L")
 
         # Thin horizontal rule
         pdf.ln(1)
