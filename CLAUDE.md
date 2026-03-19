@@ -4,10 +4,21 @@
 
 Scrapes [Lightning Bolt (PerfectServe)](https://lblite.lightning-bolt.com) schedule viewer for open shifts, filters them against the user's personal iCal schedule, and syncs results to Google Calendar via a service account. Runs automatically on GitHub Actions 4× daily.
 
-**Three shift types are tracked:**
+**There are two independent automations in this repo:**
+
+### 1. Open Shift Sync (`src/main.py`)
+Tracks open/picked-up/scheduled shifts and syncs them to Google Calendar.
 - **Open shifts** — unassigned shifts available to pick up (sage green, colorId=2)
 - **Picked-up shifts** — open shifts the user has claimed (blueberry blue, colorId=9)
 - **Scheduled shifts** — regular personal shifts from iCal subscription (grape purple, colorId=3)
+
+### 2. Triage Report (`src/triage_main.py`) — branch: `feature/triage-report`
+Generates a daily PDF triage sheet from the LB "Today's Schedule" view and emails
+it to configured recipients. See **`TRIAGE_PLAN.md`** for the full spec.
+- Scrapes MD and APP daily schedules
+- Detects teaching shifts via note icons (hover tooltip)
+- Generates PDF table (fpdf2) with shift, time, providers, responsibilities
+- Emails via SMTP with static + dynamic (shift-name → fuzzy name match → email) recipients
 
 ---
 
@@ -275,4 +286,50 @@ icalendar>=5.0.0              # iCal parsing
 recurring-ical-events>=2.1.0  # Recurring event expansion
 requests>=2.31.0              # HTTP for iCal fetch
 python-dotenv>=1.0.0          # .env loading
+fpdf2>=2.7.0                  # PDF generation (triage report)
+rapidfuzz>=3.0.0              # Fuzzy name matching (triage email recipients)
 ```
+
+---
+
+## Triage Report Module
+
+> Full spec in `TRIAGE_PLAN.md`. Summary of key design decisions below.
+
+### Navigation Differences vs. Open Shift Scraper
+
+| | Open Shift Scraper | Triage Scraper |
+|---|---|---|
+| View | Weekly grid (BSW Dallas link) | Daily Gantt (Today's Schedule button) |
+| Filter | Personnel → "Open" | No filter — all assignments visible |
+| Multi-month | Yes (loops until no new shifts) | No (single day only) |
+| Times | Inline via "Show Times" setting | Via hover tooltip |
+
+### Today's Schedule Navigation
+After login → Viewer tile → "Me" button → sidebar:
+- Click `.Dialog.isTop.ViewOptions a.current-action-button` (Today's Schedule)
+- Switch to APP schedule via `#ContextRibbon ... div.ribbon-text.no-mobile` → dropdown item 2
+
+### Teaching Shift Detection
+Teaching shifts are NOT identified by shift label — they're identified by a **note icon**
+on the right side of a provider's slot bar. Strategy:
+1. Scan ALL rows in the MD schedule (not just target labels) for note icons
+2. When found: hover over the bar → parse tooltip text
+3. Fuzzy-match note text for: "long call" → "Teaching - Long Call",
+   "short call" → "Teaching - Short Call", "on call"/"call" → "Teaching - Weekend Call"
+
+### Multi-Provider Rows
+Some shifts (APP A-2, APP PA, A3, etc.) have multiple providers in one row — all
+stacked in the same row with a single shift label. Extract all provider names per row.
+
+### Following Day T1
+After extracting current day's schedule, navigate forward one day (date arrow in ribbon),
+extract T1 row only, append as last row of PDF with a visual separator.
+Label: "Next Day — T1 (handoff)"
+
+### DOM — Known Unknowns
+The Today's Schedule DOM selectors are partially unconfirmed. Run recon if needed:
+```bash
+python -m src.triage_main --recon
+```
+Dumps HTML + screenshots to `screenshots/`. See `TRIAGE_PLAN.md` → "Known Unknowns" section.
