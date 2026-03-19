@@ -55,10 +55,14 @@ def _parse_time(raw: str) -> datetime | None:
 
 
 def _sort_key(shift: TriageShift) -> tuple[int, datetime]:
-    """Sort key: next-day T1 sorts last; within each group sort by start_time ascending."""
-    group = 1 if shift.is_next_day_t1 else 0
+    """Sort key: prior-day T3 first, main shifts next, next-day T1 last."""
+    if shift.is_prior_day_t3:
+        group = 0
+    elif shift.is_next_day_t1:
+        group = 2
+    else:
+        group = 1
     parsed = _parse_time(shift.start_time)
-    # Shifts without parseable time sort to the end of their group
     if parsed is None:
         parsed = datetime(2000, 1, 1, 23, 59, 59)
     return (group, parsed)
@@ -195,12 +199,14 @@ def generate_triage_pdf(
         # ----------------------------------------------------------------
         sorted_shifts = sorted(schedule.shifts, key=_sort_key)
 
-        # Identify index where next-day T1 section begins (may be empty)
-        next_day_start_idx: int | None = None
+        # Identify section boundaries for separators
+        main_start_idx: int | None = None    # first non-prior-day-T3 row
+        next_day_start_idx: int | None = None  # first next-day T1 row
         for idx, shift in enumerate(sorted_shifts):
-            if shift.is_next_day_t1:
+            if main_start_idx is None and not shift.is_prior_day_t3:
+                main_start_idx = idx
+            if next_day_start_idx is None and shift.is_next_day_t1:
                 next_day_start_idx = idx
-                break
 
         # ----------------------------------------------------------------
         # Create PDF
@@ -241,8 +247,13 @@ def generate_triage_pdf(
         row_colors = [COLOR_ROW_WHITE, COLOR_ROW_GRAY]
 
         for row_idx, shift in enumerate(sorted_shifts):
-            # Insert visual separator before the first next-day T1 row
-            if row_idx == next_day_start_idx:
+            # Insert separator after prior-day T3 section (before main shifts)
+            if row_idx == main_start_idx and main_start_idx != 0:
+                pdf.ln(4)
+                _draw_horizontal_rule(pdf, COLOR_RULE_GRAY, 0.3)
+                pdf.ln(3)
+            # Insert separator before next-day T1 section
+            elif row_idx == next_day_start_idx:
                 pdf.ln(4)
                 _draw_horizontal_rule(pdf, COLOR_RULE_GRAY, 0.3)
                 pdf.ln(3)

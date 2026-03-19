@@ -52,9 +52,11 @@ TRIAGE_SELECTORS = {
     "schedule_type_item_name": ".name",
     "schedule_type_item_click": ".view-link",  # clickable child; current item uses .view-details
 
-    # Day navigation arrows
-    "next_day_primary": "#ContextRibbon i.fa-angle-right",
-    "next_day_fallback": "#ContextRibbon i.fa:nth-child(2)",
+    # Day navigation arrows (scoped to .ContextRibbonItem.date to avoid matching other angle icons)
+    "next_day_primary": "#ContextRibbon .ContextRibbonItem.date .icons-left i.fa-angle-right",
+    "next_day_fallback": "#ContextRibbon .ContextRibbonItem.date i.fa:nth-child(2)",
+    "prev_day_primary": "#ContextRibbon .ContextRibbonItem.date .icons-left i.fa-angle-left",
+    "prev_day_fallback": "#ContextRibbon .ContextRibbonItem.date i.fa:nth-child(1)",
 
     # Tooltip selectors (try in order) — used only for teaching note text
     "tooltip_selectors": [
@@ -79,10 +81,12 @@ class TriageShift:
     """A single shift entry on the Today's Schedule Gantt view."""
     label: str            # e.g. "T1", "APP A-1A", "Teaching - Long Call"
     providers: list[str]  # One or more provider names on this shift
-    start_time: str       # Raw time string as returned by LB, e.g. "7:00am"
-    end_time: str         # Raw time string as returned by LB, e.g. "7:00am"
+    start_time: str       # Formatted time string, e.g. "7:00am"
+    end_time: str         # Formatted time string, e.g. "8:00am"
     source: str           # "md" or "app"
-    is_next_day_t1: bool = False  # True only for the following-day T1 row
+    is_next_day_t1: bool = False   # True for the following-day T1 footer row
+    is_prior_day_t3: bool = False  # True for overnight T3 (started previous day, handing off to T1)
+    start_dt: datetime | None = field(default=None, repr=False)  # Raw datetime for time filtering (runtime only)
 
 
 @dataclass
@@ -183,14 +187,27 @@ def _click_schedule_item(page: Page, schedule_name: str, fallback_index: int = 0
     """
     items = page.query_selector_all(TRIAGE_SELECTORS["schedule_type_items"])
 
-    for item in items:
+    def _get_text(item) -> str:
         name_el = item.query_selector(TRIAGE_SELECTORS["schedule_type_item_name"])
-        text = name_el.inner_text().strip() if name_el else item.inner_text().strip()
+        return name_el.inner_text().strip() if name_el else item.inner_text().strip()
+
+    def _do_click(item, text: str) -> bool:
+        click_target = item.query_selector(TRIAGE_SELECTORS["schedule_type_item_click"]) or item
+        click_target.click()
+        logger.info(f"Clicked schedule item: '{text}'")
+        return True
+
+    # Prefer exact match to avoid "BSW Dallas" matching "BSW Dallas APP"
+    for item in items:
+        text = _get_text(item)
+        if schedule_name.lower() == text.lower():
+            return _do_click(item, text)
+
+    # Fall back to substring match
+    for item in items:
+        text = _get_text(item)
         if schedule_name.lower() in text.lower():
-            logger.info(f"Clicked schedule item: '{text}'")
-            click_target = item.query_selector(TRIAGE_SELECTORS["schedule_type_item_click"]) or item
-            click_target.click()
-            return True
+            return _do_click(item, text)
 
     # Fallback: log available names and click by index
     available = [
@@ -293,35 +310,68 @@ def _navigate_next_day(page: Page) -> None:
     _wait_for_rows_stable(page)
 
 
+def _navigate_prev_day(page: Page) -> None:
+    """Click the previous-day arrow in the context ribbon."""
+    logger.info("Navigating to previous day...")
+    clicked = False
+
+    try:
+        arrow = page.query_selector(TRIAGE_SELECTORS["prev_day_primary"])
+        if arrow:
+            arrow.click()
+            clicked = True
+            logger.info("Clicked prev-day arrow (primary selector)")
+    except Exception as e:
+        logger.debug(f"Primary prev-day selector failed: {e}")
+
+    if not clicked:
+        try:
+            arrow = page.query_selector(TRIAGE_SELECTORS["prev_day_fallback"])
+            if arrow:
+                arrow.click()
+                clicked = True
+                logger.info("Clicked prev-day arrow (fallback selector)")
+        except Exception as e:
+            logger.warning(f"Fallback prev-day selector also failed: {e}")
+
+    if not clicked:
+        logger.warning("Could not find prev-day arrow — page may not have moved back")
+
+    _wait_for_rows_stable(page)
+
+
 # =============================================================================
 # EXTRACTION HELPERS
 # =============================================================================
 
-def _parse_gantt_time(time_str: str) -> tuple[str | None, str | None]:
-    """Parse a GanttSlot .times span into (start_time, end_time).
+def _parse_gantt_time(time_str: str) -> tuple[str | None, str | None, datetime | None, datetime | None]:
+    """Parse a GanttSlot .times span into (start_str, end_str, start_dt, end_dt).
 
     Input format: '2026-03-18T15:00:00 - 2026-03-19T01:00:00'
-    Output format: ('3:00pm', '1:00am')
+    Formatted output: ('3:00pm', '1:00am')
+    Raw datetime output: naive local datetimes (no timezone) for time filtering.
     """
     if not time_str:
-        return None, None
+        return None, None, None, None
 
     parts = time_str.split(" - ", 1)
     if len(parts) != 2:
-        return None, None
+        return None, None, None, None
 
-    def _fmt(dt_str: str) -> str:
+    def _fmt(dt_str: str) -> tuple[str, datetime | None]:
         try:
             dt = datetime.fromisoformat(dt_str.strip())
             hour = dt.hour
             minute = dt.minute
             am_pm = "am" if hour < 12 else "pm"
             display_hour = hour % 12 or 12
-            return f"{display_hour}:{minute:02d}{am_pm}"
+            return f"{display_hour}:{minute:02d}{am_pm}", dt
         except ValueError:
-            return dt_str.strip()
+            return dt_str.strip(), None
 
-    return _fmt(parts[0]), _fmt(parts[1])
+    start_str, start_dt = _fmt(parts[0])
+    end_str, end_dt = _fmt(parts[1])
+    return start_str, end_str, start_dt, end_dt
 
 
 def _get_provider_name(slot) -> str:
@@ -532,7 +582,7 @@ def _process_row(
 
             times_el = slot.query_selector(TRIAGE_SELECTORS["gantt_times"])
             time_str = times_el.inner_text().strip() if times_el else ""
-            start_time, end_time = _parse_gantt_time(time_str)
+            start_time, end_time, start_dt, _ = _parse_gantt_time(time_str)
 
             time_key = (start_time, end_time)
             if time_key in time_groups:
@@ -541,12 +591,21 @@ def _process_row(
                 time_groups[time_key] = [provider_name]
 
         for (start_time, end_time), providers in time_groups.items():
+            # Recover start_dt from any slot in this time group (all have same time)
+            _dt: datetime | None = None
+            for slot in slot_elements:
+                times_el = slot.query_selector(TRIAGE_SELECTORS["gantt_times"])
+                time_str = times_el.inner_text().strip() if times_el else ""
+                _, _, _dt, _ = _parse_gantt_time(time_str)
+                if _dt is not None:
+                    break
             shifts.append(TriageShift(
                 label=label,
                 providers=providers,
                 start_time=start_time or "",
                 end_time=end_time or "",
                 source=source,
+                start_dt=_dt,
             ))
 
     elif scan_all_for_notes:
@@ -571,13 +630,14 @@ def _process_row(
             if teaching_label:
                 times_el = slot.query_selector(TRIAGE_SELECTORS["gantt_times"])
                 time_str = times_el.inner_text().strip() if times_el else ""
-                start_time, end_time = _parse_gantt_time(time_str)
+                start_time, end_time, start_dt, _ = _parse_gantt_time(time_str)
                 shifts.append(TriageShift(
                     label=teaching_label,
                     providers=[provider_name],
                     start_time=start_time or "",
                     end_time=end_time or "",
                     source=source,
+                    start_dt=start_dt,
                 ))
                 logger.debug(
                     f"Teaching shift (non-target row '{label}'): "
@@ -595,30 +655,35 @@ def scrape_triage_schedule(
     md_shifts: list[str],
     app_shifts: list[str],
     app_schedule_name: str,
-    md_schedule_name: str = "",
     headless: bool = True,
 ) -> TriageSchedule:
     """Scrape the Today's Schedule triage view from Lightning Bolt.
 
+    Navigation order (avoids needing to switch schedule after day navigation):
+      today MD → next day → T1 extract → prev day (back to today) → APP → APP extract
+
+    Time window: 7 AM today to 7 AM tomorrow.
+      - MD/APP shifts starting before 7 AM are excluded, EXCEPT T3 which may be
+        an overnight shift (10 PM–8 AM) from the previous calendar day — these are
+        marked is_prior_day_t3=True and displayed as a handoff header in the PDF.
+
     Args:
         username: LB login email.
         password: LB login password.
-        md_shifts: Row labels to extract from the MD schedule
-            (e.g. ["T1", "T2", "T3", "A2", "A3", "A4", "A5", "A5 RRT"]).
-        app_shifts: Row labels to extract from the APP schedule
-            (e.g. ["APP PA", "APP A-1A", "APP A-1B", "APP A-2", "APP A-3"]).
+        md_shifts: Row labels to extract from the MD schedule.
+        app_shifts: Row labels to extract from the APP schedule.
         app_schedule_name: Substring matching the APP schedule name in the
             schedule-type dropdown (e.g. "BSW Hospital Medicine Dallas APP").
-        md_schedule_name: Substring matching the MD schedule name in the
-            schedule-type dropdown. Used when switching back after APP extraction.
-            Defaults to empty string (will match first item).
         headless: Run browser in headless mode (False for recon/debug).
 
     Returns:
         TriageSchedule with all extracted shifts. The date field is set to
         today's date (the "start" of the 7am–7am window).
     """
-    today = datetime.now(ZoneInfo(LOCAL_TIMEZONE)).strftime("%Y-%m-%d")
+    today_dt = datetime.now(ZoneInfo(LOCAL_TIMEZONE))
+    today = today_dt.strftime("%Y-%m-%d")
+    # 7 AM cutoff as naive local datetime (matches start_dt from _parse_gantt_time)
+    cutoff_07am = today_dt.replace(tzinfo=None).replace(hour=7, minute=0, second=0, microsecond=0)
 
     with sync_playwright() as p:
         browser: Browser = p.chromium.launch(headless=headless)
@@ -629,13 +694,13 @@ def scrape_triage_schedule(
             _login(page, username, password)
             _take_screenshot(page, "triage_01_after_login")
 
-            # Step 2: Navigate to Today's Schedule (MD)
+            # Step 2: Navigate to Today's Schedule (MD view)
             _navigate_to_today_schedule(page)
             _take_screenshot(page, "triage_02_today_schedule")
 
-            # Step 3: Extract MD schedule
+            # Step 3: Extract MD schedule (all shifts, including pre-7am T3)
             logger.info("Extracting MD schedule shifts...")
-            md_extracted = _extract_schedule(
+            md_raw = _extract_schedule(
                 page,
                 target_labels=md_shifts,
                 scan_all_for_notes=True,
@@ -643,42 +708,10 @@ def scrape_triage_schedule(
             )
             _take_screenshot(page, "triage_03_md_extracted")
 
-            # Step 4: Switch to APP schedule
-            _switch_to_app_schedule(page, app_schedule_name)
-            _take_screenshot(page, "triage_04_app_schedule")
-
-            # Step 5: Extract APP schedule
-            logger.info("Extracting APP schedule shifts...")
-            app_extracted = _extract_schedule(
-                page,
-                target_labels=app_shifts,
-                scan_all_for_notes=False,
-                source="app",
-            )
-            _take_screenshot(page, "triage_05_app_extracted")
-
-            # Step 6: Navigate forward one day (for next-day T1)
+            # Step 4: Navigate to next day (still on MD) → extract T1
             _navigate_next_day(page)
-            _take_screenshot(page, "triage_06_next_day")
+            _take_screenshot(page, "triage_04_next_day")
 
-            # Step 7: Switch back to MD schedule
-            if md_schedule_name:
-                _switch_to_md_schedule(page, md_schedule_name)
-            else:
-                # No MD schedule name provided — open dropdown and click first item
-                logger.info("No MD schedule name provided; clicking first schedule-type item...")
-                page.wait_for_selector(TRIAGE_SELECTORS["schedule_type_dropdown"], timeout=10000)
-                page.click(TRIAGE_SELECTORS["schedule_type_dropdown"])
-                page.wait_for_selector(TRIAGE_SELECTORS["schedule_type_items"], timeout=5000, state="attached")
-                items = page.query_selector_all(TRIAGE_SELECTORS["schedule_type_items"])
-                if items:
-                    fallback_el = items[0].query_selector(TRIAGE_SELECTORS["schedule_type_item_click"]) or items[0]
-                    fallback_el.click()
-                _wait_for_rows_stable(page)
-
-            _take_screenshot(page, "triage_07_next_day_md")
-
-            # Step 8: Extract T1 only from next day; mark is_next_day_t1
             logger.info("Extracting next-day T1 shift...")
             next_day_raw = _extract_schedule(
                 page,
@@ -686,27 +719,61 @@ def scrape_triage_schedule(
                 scan_all_for_notes=False,
                 source="md",
             )
-            next_day_t1: list[TriageShift] = []
-            for shift in next_day_raw:
-                next_day_t1.append(TriageShift(
-                    label=shift.label,
-                    providers=shift.providers,
-                    start_time=shift.start_time,
-                    end_time=shift.end_time,
-                    source=shift.source,
+            next_day_t1: list[TriageShift] = [
+                TriageShift(
+                    label=s.label,
+                    providers=s.providers,
+                    start_time=s.start_time,
+                    end_time=s.end_time,
+                    source=s.source,
                     is_next_day_t1=True,
-                ))
+                )
+                for s in next_day_raw
+            ]
+            _take_screenshot(page, "triage_05_next_day_t1")
 
-            _take_screenshot(page, "triage_08_next_day_t1")
+            # Step 5: Navigate back to today (still on MD) → switch to APP → extract APP
+            _navigate_prev_day(page)
+            _take_screenshot(page, "triage_06_back_today")
 
-            # Step 9: Assemble and return TriageSchedule
-            # Ordering: MD shifts + APP shifts (ordered by start time as extracted),
-            # then next-day T1 last (as specified)
-            all_shifts = md_extracted + app_extracted + next_day_t1
+            _switch_to_app_schedule(page, app_schedule_name)
+            _take_screenshot(page, "triage_07_app_schedule")
 
+            logger.info("Extracting APP schedule shifts...")
+            app_raw = _extract_schedule(
+                page,
+                target_labels=app_shifts,
+                scan_all_for_notes=False,
+                source="app",
+            )
+            _take_screenshot(page, "triage_08_app_extracted")
+
+            # Step 6: Apply 7 AM time filter and categorize shifts
+            # T3 starting before 7 AM → prior-day overnight handoff
+            # All other shifts starting before 7 AM → exclude
+            # Shifts starting at or after 7 AM → include as normal
+            md_filtered: list[TriageShift] = []
+            for shift in md_raw:
+                if shift.start_dt is not None and shift.start_dt < cutoff_07am:
+                    if shift.label.upper() == "T3":
+                        shift.is_prior_day_t3 = True
+                        md_filtered.append(shift)
+                    # else: overnight non-T3 shift, exclude
+                else:
+                    md_filtered.append(shift)  # start_dt unknown or >= 7 AM
+
+            app_filtered: list[TriageShift] = [
+                s for s in app_raw
+                if s.start_dt is None or s.start_dt >= cutoff_07am
+            ]
+
+            all_shifts = md_filtered + app_filtered + next_day_t1
+
+            prior_t3_count = sum(1 for s in md_filtered if s.is_prior_day_t3)
             logger.info(
-                f"Triage extraction complete: {len(md_extracted)} MD shifts, "
-                f"{len(app_extracted)} APP shifts, {len(next_day_t1)} next-day T1 shift(s)"
+                f"Triage extraction complete: {len(md_filtered)} MD shifts "
+                f"({prior_t3_count} prior-day T3), "
+                f"{len(app_filtered)} APP shifts, {len(next_day_t1)} next-day T1 shift(s)"
             )
 
             return TriageSchedule(date=today, shifts=all_shifts)
@@ -871,7 +938,7 @@ def _recon_extract_all(page: Page) -> None:
             provider_name = _get_provider_name(slot)
             times_el = slot.query_selector(TRIAGE_SELECTORS["gantt_times"])
             time_str = times_el.inner_text().strip() if times_el else ""
-            start_time, end_time = _parse_gantt_time(time_str)
+            start_time, end_time, _, _ = _parse_gantt_time(time_str)
             has_note = _has_note_icon(slot)
             note_tag = " [NOTE]" if has_note else ""
             print(f"    Slot {i}: {provider_name!r} | {start_time}–{end_time}{note_tag}")
