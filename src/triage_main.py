@@ -39,7 +39,7 @@ def _run(args: argparse.Namespace) -> None:
     # Step 3: Parse all config
     md_shifts: list[str] = [
         s.strip()
-        for s in os.getenv("TRIAGE_MD_SHIFTS", "T1,T2,T3,A2,A3,A4,A5,A5 RRT").split(",")
+        for s in os.getenv("TRIAGE_MD_SHIFTS", "T1,T2,T3,A2,A3,A4,A5,A5-RRT").split(",")
         if s.strip()
     ]
     app_shifts: list[str] = [

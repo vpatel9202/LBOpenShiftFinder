@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -30,16 +29,19 @@ TRIAGE_SELECTORS = {
     "me_button": "#ContextRibbon .ContextRibbonItem.limit-width-large.view",
 
     # "Today's Schedule" action button in the sidebar dialog
-    "today_schedule_btn": ".Dialog.isTop.ViewOptions a.current-action-button",
+    # NOTE: Multiple .current-action-button links exist (My Schedule, Today's Schedule, Default).
+    # Target specifically by href to avoid clicking the first one (My Schedule).
+    "today_schedule_btn": ".Dialog.isTop.ViewOptions a.current-action-button[href*='/viewer/today']",
 
-    # Schedule grid containers — try both; WeekContainer may be child of StandardContainer
-    "grid_container_primary": ".StandardContainer .WeekContainer",
-    "grid_container_fallback": ".StandardContainer",
+    # Gantt grid container (Today's Schedule view)
+    "grid_container_primary": ".GanttContainer",
+    "grid_container_fallback": ".GanttContainer",  # same — no fallback needed
 
-    # Data rows (same as weekly grid)
-    "data_row": ".DataRow",
-    "left_col": ".leftCol[data-cy='leftCol']",
-    "data_cell": "[data-cy='dataCell']",
+    # Gantt rows and slots
+    "data_row": ".GanttRow",
+    "left_col": ".header",       # shift label inside each GanttRow
+    "gantt_slot": ".GanttSlot",  # provider bar inside each GanttRow
+    "gantt_times": ".times",     # ISO time range span inside each GanttSlot
 
     # Schedule-type dropdown in context ribbon (opens sidebar to switch MD/APP)
     "schedule_type_dropdown": "#ContextRibbon div.ContextRibbonItem.today-template div.ribbon-text.no-mobile",
@@ -49,31 +51,20 @@ TRIAGE_SELECTORS = {
     "schedule_type_fallback": "div.Item:nth-child(2) > div:nth-child(1) > div:nth-child(1)",
 
     # Day navigation arrows
-    "next_day_primary": "#ContextRibbon i.fa-chevron-right",
+    "next_day_primary": "#ContextRibbon i.fa-angle-right",
     "next_day_fallback": "#ContextRibbon i.fa:nth-child(2)",
 
-    # Tooltip selectors (try in order)
+    # Tooltip selectors (try in order) — used only for teaching note text
     "tooltip_selectors": [
+        ".tool-tip",
         ".tooltip",
         ".SlotToolTip",
         "[class*='tooltip']",
         "[class*='Tooltip']",
     ],
 
-    # Note icons within a slot
-    "note_icon_selectors": [
-        ".fa-sticky-note",
-        ".fa-note",
-        ".note-icon",
-        "[class*='note']",
-        "i.fa",
-    ],
-
-    # Slot elements within a data cell (provider bars)
-    "slot_selectors": [
-        ".Slot",
-        "[data-cy='dataCell'] > *",
-    ],
+    # Note icon within a GanttSlot — confirmed class in Gantt view
+    "note_icon": ".noteIcon",
 }
 
 
@@ -103,6 +94,30 @@ class TriageSchedule:
 # NAVIGATION HELPERS
 # =============================================================================
 
+def _wait_for_rows_stable(page: Page, poll_ms: int = 1000, stable_rounds: int = 3, max_rounds: int = 30) -> None:
+    """Poll GanttRow count until it stops changing.
+
+    Rows load asynchronously after the GanttContainer appears. This function
+    waits until the count is unchanged for `stable_rounds` consecutive polls
+    or `max_rounds` total polls have elapsed.
+    """
+    prev_count = -1
+    stable = 0
+    for _ in range(max_rounds):
+        rows = page.query_selector_all(TRIAGE_SELECTORS["data_row"])
+        count = len(rows)
+        if count == prev_count:
+            stable += 1
+            if stable >= stable_rounds:
+                logger.info(f"GanttRow count stabilized at {count}")
+                return
+        else:
+            stable = 0
+            prev_count = count
+        page.wait_for_timeout(poll_ms)
+    logger.warning(f"GanttRow count did not stabilize after {max_rounds} polls (last count: {prev_count})")
+
+
 def _navigate_to_today_schedule(page: Page) -> None:
     """Navigate from the post-login selection screen to Today's Schedule.
 
@@ -117,7 +132,9 @@ def _navigate_to_today_schedule(page: Page) -> None:
     logger.info("Clicking Viewer tile...")
     page.wait_for_selector(TRIAGE_SELECTORS["viewer_tile"], timeout=15000)
     page.click(TRIAGE_SELECTORS["viewer_tile"])
-    page.wait_for_selector(TRIAGE_SELECTORS["context_ribbon"], timeout=30000)
+    # Wait for the "Me" button to appear — proves Viewer loaded.
+    # Do NOT wait for #ContextRibbon visibility; it is hidden in the DOM.
+    page.wait_for_selector(TRIAGE_SELECTORS["me_button"], timeout=30000)
 
     # Step 2: Click "Me" button to open the view picker sidebar
     logger.info("Clicking 'Me' button...")
@@ -141,22 +158,13 @@ def _navigate_to_today_schedule(page: Page) -> None:
             timeout=20000,
             state="attached",
         )
-        logger.info("Daily grid container (primary) found")
+        logger.info("Daily grid container found — waiting for all rows to load...")
     except PwTimeout:
-        logger.warning(
-            "Primary grid container (.WeekContainer) not found; "
-            "falling back to .StandardContainer"
-        )
-        try:
-            page.wait_for_selector(
-                TRIAGE_SELECTORS["grid_container_fallback"],
-                timeout=10000,
-                state="attached",
-            )
-            logger.info("Daily grid container (fallback) found")
-        except PwTimeout:
-            logger.warning("Neither grid container selector matched — DOM may differ from expected")
+        logger.warning("GanttContainer not found within timeout — proceeding anyway")
 
+    # The GanttContainer appears quickly with the user's own shifts first; remaining
+    # rows load asynchronously. Poll until the GanttRow count stabilizes.
+    _wait_for_rows_stable(page)
     logger.info("Navigation to Today's Schedule complete")
 
 
@@ -209,12 +217,8 @@ def _switch_to_app_schedule(page: Page, app_schedule_name: str) -> None:
             logger.warning("No schedule type items found; cannot switch schedule")
             return
 
-    # Wait for grid to re-render
-    page.wait_for_timeout(2000)
-    try:
-        page.wait_for_selector(TRIAGE_SELECTORS["grid_container_fallback"], timeout=10000, state="attached")
-    except PwTimeout:
-        logger.warning("Grid container not found after switching to APP schedule — proceeding anyway")
+    # Wait for grid to re-render with all rows
+    _wait_for_rows_stable(page)
     logger.info("Switch to APP schedule complete")
 
 
@@ -254,11 +258,7 @@ def _switch_to_md_schedule(page: Page, md_schedule_name: str) -> None:
             logger.warning("No schedule type items found; cannot switch to MD schedule")
             return
 
-    page.wait_for_timeout(2000)
-    try:
-        page.wait_for_selector(TRIAGE_SELECTORS["grid_container_fallback"], timeout=10000, state="attached")
-    except PwTimeout:
-        logger.warning("Grid container not found after switching to MD schedule — proceeding anyway")
+    _wait_for_rows_stable(page)
     logger.info("Switch to MD schedule complete")
 
 
@@ -293,22 +293,77 @@ def _navigate_next_day(page: Page) -> None:
     if not clicked:
         logger.warning("Could not find next-day arrow — page may not have advanced")
 
-    page.wait_for_timeout(2000)  # Wait for day transition to complete
-    try:
-        page.wait_for_selector(TRIAGE_SELECTORS["grid_container_fallback"], timeout=10000, state="attached")
-    except PwTimeout:
-        logger.warning("Grid container not found after navigating to next day — proceeding anyway")
+    _wait_for_rows_stable(page)
 
 
 # =============================================================================
 # EXTRACTION HELPERS
 # =============================================================================
 
+def _parse_gantt_time(time_str: str) -> tuple[str | None, str | None]:
+    """Parse a GanttSlot .times span into (start_time, end_time).
+
+    Input format: '2026-03-18T15:00:00 - 2026-03-19T01:00:00'
+    Output format: ('3:00pm', '1:00am')
+    """
+    if not time_str:
+        return None, None
+
+    parts = time_str.split(" - ", 1)
+    if len(parts) != 2:
+        return None, None
+
+    def _fmt(dt_str: str) -> str:
+        try:
+            dt = datetime.fromisoformat(dt_str.strip())
+            hour = dt.hour
+            minute = dt.minute
+            am_pm = "am" if hour < 12 else "pm"
+            display_hour = hour % 12 or 12
+            return f"{display_hour}:{minute:02d}{am_pm}"
+        except ValueError:
+            return dt_str.strip()
+
+    return _fmt(parts[0]), _fmt(parts[1])
+
+
+def _get_provider_name(slot) -> str:
+    """Extract the provider name from a GanttSlot element.
+
+    The provider name is the direct text content of the slot (text nodes only),
+    excluding text from child elements like .times and .contextual-clues.
+    """
+    try:
+        return slot.evaluate(
+            """el => {
+                const parts = [];
+                for (const node of el.childNodes) {
+                    if (node.nodeType === 3) {
+                        const t = node.textContent.trim();
+                        if (t) parts.push(t);
+                    }
+                }
+                return parts.join(' ').trim();
+            }"""
+        )
+    except Exception:
+        # Fallback: use inner_text and strip the times text
+        try:
+            full_text = slot.inner_text().strip()
+            times_el = slot.query_selector(TRIAGE_SELECTORS["gantt_times"])
+            if times_el:
+                times_text = times_el.inner_text().strip()
+                full_text = full_text.replace(times_text, "").strip()
+            return full_text.split("\n")[0].strip()
+        except Exception:
+            return ""
+
+
 def _get_tooltip_text(page: Page, slot) -> str | None:
     """Hover over a slot element and read the tooltip text.
 
-    Tries each tooltip selector in sequence; returns the inner text of the
-    first one found, or None if no tooltip appears.
+    Used only for teaching note text detection. Tries each tooltip selector
+    in sequence; returns the inner text of the first one found, or None.
     """
     try:
         slot.hover()
@@ -330,46 +385,23 @@ def _get_tooltip_text(page: Page, slot) -> str | None:
     return None
 
 
-def _parse_tooltip(tooltip_text: str) -> tuple[str | None, str | None, str | None, str | None]:
-    """Parse a hover tooltip into its components.
+def _parse_note_tooltip(tooltip_text: str) -> str | None:
+    """Extract note/annotation text from a hover tooltip.
 
-    Expected format (confirmed from screenshots):
+    Looks for a note line after the provider name. Returns the note text
+    or None if the tooltip doesn't contain a note.
+
+    Example tooltip:
         Mar 19, 2026
         7:00am - 5:00pm
         Christina Sandwell
-        long call
-
-    Returns:
-        (start_time, end_time, provider_name, note_text)
-        Any field may be None if not found/parsed.
+        long call       ← note text
     """
     lines = [line.strip() for line in tooltip_text.strip().splitlines() if line.strip()]
-
-    if len(lines) < 2:
-        return None, None, None, None
-
-    # Line 0: date (ignore)
-    # Line 1: time range "7:00am - 5:00pm" or "7:00am – 5:00pm"
-    time_line = lines[1]
-    start_time: str | None = None
-    end_time: str | None = None
-
-    time_match = re.search(
-        r"(\d{1,2}:\d{2}\s*(?:am|pm|AM|PM)?)\s*[-–]\s*(\d{1,2}:\d{2}\s*(?:am|pm|AM|PM)?)",
-        time_line,
-        re.IGNORECASE,
-    )
-    if time_match:
-        start_time = time_match.group(1).strip()
-        end_time = time_match.group(2).strip()
-
-    # Line 2: provider name (if present)
-    provider_name: str | None = lines[2] if len(lines) > 2 else None
-
-    # Line 3+: note text (join remaining lines)
-    note_text: str | None = " ".join(lines[3:]) if len(lines) > 3 else None
-
-    return start_time, end_time, provider_name, note_text
+    # Note text is typically line 3+ (after date, time, provider name)
+    if len(lines) > 3:
+        return " ".join(lines[3:])
+    return None
 
 
 def _classify_note(note_text: str) -> str | None:
@@ -392,46 +424,19 @@ def _classify_note(note_text: str) -> str | None:
 
 
 def _has_note_icon(slot) -> bool:
-    """Check whether a slot element contains a note icon."""
-    for sel in TRIAGE_SELECTORS["note_icon_selectors"]:
-        try:
-            icon = slot.query_selector(sel)
-            if icon:
-                return True
-        except Exception:
-            continue
-    return False
+    """Check whether a GanttSlot element contains a note icon."""
+    try:
+        return bool(slot.query_selector(TRIAGE_SELECTORS["note_icon"]))
+    except Exception:
+        return False
 
 
 def _get_slot_elements(row):
-    """Return all slot/provider bar elements within a DataRow.
-
-    Tries .Slot children of data cells first; falls back to direct children
-    of data cells that contain any text content.
-    """
-    slots = []
-
-    # Try .Slot elements inside data cells
+    """Return all GanttSlot provider bar elements within a GanttRow."""
     try:
-        found = row.query_selector_all("[data-cy='dataCell'] .Slot")
-        if found:
-            return found
+        return row.query_selector_all(TRIAGE_SELECTORS["gantt_slot"])
     except Exception:
-        pass
-
-    # Fallback: direct children of data cells that have visible text
-    try:
-        cells = row.query_selector_all("[data-cy='dataCell']")
-        for cell in cells:
-            children = cell.query_selector_all(":scope > *")
-            for child in children:
-                text = child.inner_text().strip()
-                if text:
-                    slots.append(child)
-    except Exception:
-        pass
-
-    return slots
+        return []
 
 
 # =============================================================================
@@ -459,28 +464,21 @@ def _extract_schedule(
     shifts: list[TriageShift] = []
     target_lower = {lbl.lower() for lbl in target_labels}
 
-    # Find the grid container — try primary then fallback
+    # Find the GanttContainer
     container = page.query_selector(TRIAGE_SELECTORS["grid_container_primary"])
     if not container:
-        logger.warning(
-            "Primary grid container (.WeekContainer) not found; "
-            "trying fallback (.StandardContainer)"
-        )
-        container = page.query_selector(TRIAGE_SELECTORS["grid_container_fallback"])
-
-    if not container:
-        logger.warning("No grid container found — cannot extract schedule")
+        logger.warning("GanttContainer not found — cannot extract schedule")
         _dump_html(page, f"triage_no_container_{source}")
         return shifts
 
-    # Find all DataRow elements within the container
+    # Find all GanttRow elements within the container
     rows = container.query_selector_all(TRIAGE_SELECTORS["data_row"])
     if not rows:
-        logger.warning(f"Found 0 DataRow elements in grid container ({source})")
+        logger.warning(f"Found 0 GanttRow elements in GanttContainer ({source})")
         _dump_html(page, f"triage_no_rows_{source}")
         return shifts
 
-    logger.info(f"Found {len(rows)} DataRow elements ({source})")
+    logger.info(f"Found {len(rows)} GanttRow elements ({source})")
 
     for row in rows:
         try:
@@ -501,11 +499,11 @@ def _process_row(
     source: str,
     shifts: list[TriageShift],
 ) -> None:
-    """Process a single DataRow and append matching TriageShift entries to shifts.
+    """Process a single GanttRow and append matching TriageShift entries to shifts.
 
     Modifies shifts in place.
     """
-    # Get label from left column
+    # Get label from the row header
     left_col = row.query_selector(TRIAGE_SELECTORS["left_col"])
     if not left_col:
         return
@@ -518,43 +516,33 @@ def _process_row(
     if not is_target and not scan_all_for_notes:
         return  # Nothing to do for this row
 
-    # Get slot elements (provider bars)
+    # Get GanttSlot elements (provider bars)
     slot_elements = _get_slot_elements(row)
 
     if not slot_elements:
         if is_target:
-            logger.debug(f"No slot elements found for target row: '{label}'")
+            logger.debug(f"No GanttSlot elements found for target row: '{label}'")
         return
 
     if is_target:
-        # Group slots by time to detect multi-provider same-time shifts
+        # Group slots by time window to merge multi-provider same-time shifts
         time_groups: dict[tuple[str | None, str | None], list[str]] = {}
 
         for slot in slot_elements:
-            tooltip_text = _get_tooltip_text(page, slot)
-
-            if tooltip_text:
-                start_time, end_time, provider_name, note_text = _parse_tooltip(tooltip_text)
-            else:
-                # Fallback: read slot's direct inner text for provider name
-                raw_text = slot.inner_text().strip()
-                provider_name = raw_text.split("\n")[0].strip() if raw_text else None
-                start_time = None
-                end_time = None
-                note_text = None
-
+            provider_name = _get_provider_name(slot)
             if not provider_name:
                 continue
 
-            time_key = (start_time, end_time)
+            times_el = slot.query_selector(TRIAGE_SELECTORS["gantt_times"])
+            time_str = times_el.inner_text().strip() if times_el else ""
+            start_time, end_time = _parse_gantt_time(time_str)
 
+            time_key = (start_time, end_time)
             if time_key in time_groups:
-                # Same time window — add to existing group (multi-provider)
                 time_groups[time_key].append(provider_name)
             else:
                 time_groups[time_key] = [provider_name]
 
-        # Convert time_groups into TriageShift entries
         for (start_time, end_time), providers in time_groups.items():
             shifts.append(TriageShift(
                 label=label,
@@ -567,20 +555,26 @@ def _process_row(
     elif scan_all_for_notes:
         # Non-target row — only scan for note icons / teaching notes
         for slot in slot_elements:
-            has_icon = _has_note_icon(slot)
-            if not has_icon:
+            if not _has_note_icon(slot):
+                continue
+
+            provider_name = _get_provider_name(slot)
+            if not provider_name:
                 continue
 
             tooltip_text = _get_tooltip_text(page, slot)
             if not tooltip_text:
                 continue
 
-            start_time, end_time, provider_name, note_text = _parse_tooltip(tooltip_text)
-            if not note_text or not provider_name:
+            note_text = _parse_note_tooltip(tooltip_text)
+            if not note_text:
                 continue
 
             teaching_label = _classify_note(note_text)
             if teaching_label:
+                times_el = slot.query_selector(TRIAGE_SELECTORS["gantt_times"])
+                time_str = times_el.inner_text().strip() if times_el else ""
+                start_time, end_time = _parse_gantt_time(time_str)
                 shifts.append(TriageShift(
                     label=teaching_label,
                     providers=[provider_name],
@@ -814,27 +808,25 @@ def _recon_extract_all(page: Page) -> None:
     """Extract and print all rows (ignoring target_labels filter) for recon."""
     container = page.query_selector(TRIAGE_SELECTORS["grid_container_primary"])
     if not container:
-        container = page.query_selector(TRIAGE_SELECTORS["grid_container_fallback"])
-    if not container:
-        print("  WARNING: No grid container found for extraction")
+        print("  WARNING: GanttContainer not found")
         return
 
     rows = container.query_selector_all(TRIAGE_SELECTORS["data_row"])
-    print(f"  Processing {len(rows)} rows...")
+    print(f"  Processing {len(rows)} GanttRow elements...")
 
     for row in rows:
         left_col = row.query_selector(TRIAGE_SELECTORS["left_col"])
-        label = left_col.inner_text().strip() if left_col else "(no leftCol)"
+        label = left_col.inner_text().strip() if left_col else "(no header)"
         slot_elements = _get_slot_elements(row)
         print(f"  Row '{label}': {len(slot_elements)} slot(s)")
         for i, slot in enumerate(slot_elements):
-            tooltip_text = _get_tooltip_text(page, slot)
-            if tooltip_text:
-                start_time, end_time, provider_name, note_text = _parse_tooltip(tooltip_text)
-                print(f"    Slot {i}: {provider_name} | {start_time}–{end_time} | note={note_text!r}")
-            else:
-                raw = slot.inner_text().strip().replace("\n", " ")
-                print(f"    Slot {i}: (no tooltip) raw={raw!r}")
+            provider_name = _get_provider_name(slot)
+            times_el = slot.query_selector(TRIAGE_SELECTORS["gantt_times"])
+            time_str = times_el.inner_text().strip() if times_el else ""
+            start_time, end_time = _parse_gantt_time(time_str)
+            has_note = _has_note_icon(slot)
+            note_tag = " [NOTE]" if has_note else ""
+            print(f"    Slot {i}: {provider_name!r} | {start_time}–{end_time}{note_tag}")
 
 
 # =============================================================================
