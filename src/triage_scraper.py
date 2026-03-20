@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -15,6 +16,9 @@ from src.scraper import _login, _take_screenshot, _dump_html, SCREENSHOTS_DIR
 logger = logging.getLogger(__name__)
 
 LOCAL_TIMEZONE = os.getenv("LOCAL_TIMEZONE", "America/Chicago")
+
+# Regex matching LB open-slot placeholders (e.g. "OPEN 1", "OPEN 2", "OPEN")
+_OPEN_SLOT_RE = re.compile(r"^OPEN\s*\d*$", re.IGNORECASE)
 
 # =============================================================================
 # SELECTORS
@@ -611,15 +615,20 @@ def _process_row(
 
     elif scan_all_for_notes:
         # Non-target row — only scan for note icons / teaching notes
+        note_icon_count = 0
         for slot in slot_elements:
             if not _has_note_icon(slot):
                 continue
+
+            note_icon_count += 1
+            logger.info(f"Note icon found in row '{label}' slot for provider (scanning...)")
 
             provider_name = _get_provider_name(slot)
             if not provider_name:
                 continue
 
             tooltip_text = _get_tooltip_text(page, slot)
+            logger.info(f"Tooltip text for '{provider_name}' in row '{label}': {tooltip_text!r}")
             if not tooltip_text:
                 continue
 
@@ -641,10 +650,13 @@ def _process_row(
                     start_dt=start_dt,
                     end_dt=end_dt,
                 ))
-                logger.debug(
+                logger.info(
                     f"Teaching shift (non-target row '{label}'): "
                     f"{teaching_label} — {provider_name}"
                 )
+
+        if note_icon_count == 0 and slot_elements:
+            logger.debug(f"No note icons found in non-target row '{label}' ({len(slot_elements)} slots scanned)")
 
 
 # =============================================================================
@@ -811,6 +823,7 @@ def scrape_triage_schedule(
                         deduped.append(p)
                         seen_p.add(p)
                 shift.providers = deduped
+                shift.providers = [p for p in shift.providers if not _OPEN_SLOT_RE.match(p)]
 
             all_shifts = list(collapsed.values())
 
