@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-03-19T20:29:18.018797+00:00",
+  "last_run": "2026-03-20T06:51:35.932198+00:00",
   "synced_shifts": [
     {
       "date": "2026-03-15",
@@ -298,6 +298,14 @@
       "google_event_id": "gb51jqcfsd71r8dbmt7qk0i6fo"
     },
     {
+      "date": "2026-03-17",
+      "start_time": "2026-03-17T21:00:00",
+      "end_time": "2026-03-18T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "vtfksi0ur56ci1tb6h6bfjie6g"
+    },
+    {
       "date": "2026-01-27",
       "start_time": "2026-01-27T07:00:00",
       "end_time": "2026-01-27T17:00:00",
@@ -498,24 +506,24 @@
       "google_event_id": "irc73mcc1gkb5emr58h4o18vuo"
     },
     {
-      "date": "2026-03-17",
-      "start_time": "2026-03-17T21:00:00",
-      "end_time": "2026-03-18T07:00:00",
+      "date": "2026-03-19",
+      "start_time": "2026-03-19T21:00:00",
+      "end_time": "2026-03-20T07:00:00",
       "assignment": "APP PA",
       "label": "OPEN 1",
-      "google_event_id": "vtfksi0ur56ci1tb6h6bfjie6g"
+      "google_event_id": "gnhqigt3spilppo4i2m9n6lt6g"
+    },
+    {
+      "date": "2026-03-19",
+      "start_time": "2026-03-19T07:00:00",
+      "end_time": "2026-03-19T17:00:00",
+      "assignment": "Oncology Team APP - 1",
+      "label": "OPEN 1",
+      "google_event_id": "80lm2s7bpa7tdc3s7dv8c0sc44"
     }
   ],
   "picked_shifts": [],
   "scheduled_shifts": [
-    {
-      "date": "2026-03-19",
-      "start_time": "2026-03-19T10:00:00",
-      "end_time": "2026-03-19T20:00:00",
-      "assignment": "A2",
-      "label": "Scheduled",
-      "google_event_id": "6goenfkumshbglks3k0gqjabbo"
-    },
     {
       "date": "2026-03-26",
       "start_time": "2026-03-26T07:00:00",
@@ -835,6 +843,14 @@
       "assignment": "R12",
       "label": "Scheduled",
       "google_event_id": "4q0adujqumvisd11559pf596ho"
+    },
+    {
+      "date": "2026-03-19",
+      "start_time": "2026-03-19T10:00:00",
+      "end_time": "2026-03-19T20:00:00",
+      "assignment": "A2",
+      "label": "Scheduled",
+      "google_event_id": "6goenfkumshbglks3k0gqjabbo"
     },
     {
       "date": "2026-03-18",
