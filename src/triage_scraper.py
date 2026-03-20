@@ -575,9 +575,13 @@ def _process_row(
     if is_target:
         # Group slots by time window to merge multi-provider same-time shifts.
         # Key: (start_dt, end_dt) when parseable — datetime precision prevents
-        #   slots from different calendar days collapsing together.
-        # Value: (providers, start_dt, end_dt) — all slots in a group share the same times.
-        time_groups: dict[tuple, tuple[list[str], datetime | None, datetime | None]] = {}
+        #   slots from different calendar days collapsing together even when
+        #   their formatted time strings are identical (e.g. two T3 nights).
+        #   Falls back to (start_str, end_str) only when parsing fails.
+        # Value: (providers, start_str, end_str, start_dt, end_dt) — formatted
+        #   strings stored separately in the value so the key change doesn't
+        #   affect what gets written to TriageShift.
+        time_groups: dict[tuple, tuple[list[str], str, str, datetime | None, datetime | None]] = {}
 
         for slot in slot_elements:
             provider_name = _get_provider_name(slot)
@@ -588,22 +592,18 @@ def _process_row(
             time_str = times_el.inner_text().strip() if times_el else ""
             start_time, end_time, start_dt, end_dt = _parse_gantt_time(time_str)
 
-            # Key by actual datetimes so slots from different calendar days
-            # (e.g. tonight's T3 vs last night's T3) are never merged even
-            # when their formatted time strings are identical.
-            # Fall back to string key only when datetimes couldn't be parsed.
             time_key = (start_dt, end_dt) if start_dt is not None else (start_time, end_time)
             if time_key in time_groups:
                 time_groups[time_key][0].append(provider_name)
             else:
-                time_groups[time_key] = ([provider_name], start_dt, end_dt)
+                time_groups[time_key] = ([provider_name], start_time or "", end_time or "", start_dt, end_dt)
 
-        for (start_time, end_time), (providers, start_dt, end_dt) in time_groups.items():
+        for _key, (providers, start_time, end_time, start_dt, end_dt) in time_groups.items():
             shifts.append(TriageShift(
                 label=label,
                 providers=providers,
-                start_time=start_time or "",
-                end_time=end_time or "",
+                start_time=start_time,
+                end_time=end_time,
                 source=source,
                 start_dt=start_dt,
                 end_dt=end_dt,
