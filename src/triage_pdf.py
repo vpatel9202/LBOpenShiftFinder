@@ -264,8 +264,15 @@ def generate_triage_pdf(
             time_text = _format_time_range(shift.start_time, shift.end_time)
             resp_text = responsibilities.get(shift.label, "")
 
+            if shift.is_prior_day_t3:
+                label_text = f"{shift.label}\n(prior night)"
+            elif shift.is_next_day_t1:
+                label_text = f"{shift.label}\n(next day)"
+            else:
+                label_text = shift.label
+
             texts = [
-                shift.label,
+                label_text,
                 time_text,
                 provider_text,
                 resp_text,

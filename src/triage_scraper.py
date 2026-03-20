@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from playwright.sync_api import sync_playwright, Page, Browser, TimeoutError as PwTimeout
@@ -686,6 +686,8 @@ def scrape_triage_schedule(
     today = today_dt.strftime("%Y-%m-%d")
     # 7 AM cutoff as naive local datetime (matches start_dt from _parse_gantt_time)
     cutoff_07am = today_dt.replace(tzinfo=None).replace(hour=7, minute=0, second=0, microsecond=0)
+    # Upper bound: shifts starting at or after 7 AM tomorrow belong on the next sheet
+    cutoff_07am_tomorrow = cutoff_07am + timedelta(days=1)
 
     with sync_playwright() as p:
         browser: Browser = p.chromium.launch(headless=headless)
@@ -770,17 +772,47 @@ def scrape_triage_schedule(
                     shift.is_prior_day_t3 = True
                     md_filtered.append(shift)
                     continue
-                # Exclude shifts that finish before 7 AM (wrapping up from previous night)
-                if shift.end_dt is not None and shift.end_dt < cutoff_07am:
+                # Exclude shifts that started before 7 AM today (prior-night non-T3)
+                if shift.start_dt is not None and shift.start_dt < cutoff_07am:
+                    continue
+                # Exclude shifts starting at or after 7 AM tomorrow (next sheet's window)
+                if shift.start_dt is not None and shift.start_dt >= cutoff_07am_tomorrow:
                     continue
                 md_filtered.append(shift)
 
             app_filtered: list[TriageShift] = [
                 s for s in app_raw
-                if s.end_dt is None or s.end_dt >= cutoff_07am
+                if s.start_dt is None
+                or (s.start_dt >= cutoff_07am and s.start_dt < cutoff_07am_tomorrow)
             ]
 
-            all_shifts = md_filtered + app_filtered + next_day_t1
+            # Collapse TriageShifts with the same label, times, and section flags into
+            # a single row — merges prior-night and tonight cohorts (e.g. A5, A5-RRT)
+            # that share the same formatted time string but different actual start dates.
+            def _collapse_key(s: TriageShift) -> tuple:
+                return (s.label, s.start_time, s.end_time, s.is_prior_day_t3, s.is_next_day_t1)
+
+            collapsed: dict[tuple, TriageShift] = {}
+            for shift in md_filtered + app_filtered + next_day_t1:
+                key = _collapse_key(shift)
+                if key in collapsed:
+                    collapsed[key].providers.extend(shift.providers)
+                else:
+                    collapsed[key] = shift
+
+            # Deduplicate providers within each collapsed shift (order-preserving).
+            # A provider can appear in multiple time groups within the same row
+            # (e.g. Mauro Botello filling two APP PA slots on the same night).
+            for shift in collapsed.values():
+                seen_p: set[str] = set()
+                deduped: list[str] = []
+                for p in shift.providers:
+                    if p not in seen_p:
+                        deduped.append(p)
+                        seen_p.add(p)
+                shift.providers = deduped
+
+            all_shifts = list(collapsed.values())
 
             prior_t3_count = sum(1 for s in md_filtered if s.is_prior_day_t3)
             logger.info(
