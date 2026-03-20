@@ -574,8 +574,10 @@ def _process_row(
 
     if is_target:
         # Group slots by time window to merge multi-provider same-time shifts.
+        # Key: (start_dt, end_dt) when parseable — datetime precision prevents
+        #   slots from different calendar days collapsing together.
         # Value: (providers, start_dt, end_dt) — all slots in a group share the same times.
-        time_groups: dict[tuple[str | None, str | None], tuple[list[str], datetime | None, datetime | None]] = {}
+        time_groups: dict[tuple, tuple[list[str], datetime | None, datetime | None]] = {}
 
         for slot in slot_elements:
             provider_name = _get_provider_name(slot)
@@ -586,7 +588,11 @@ def _process_row(
             time_str = times_el.inner_text().strip() if times_el else ""
             start_time, end_time, start_dt, end_dt = _parse_gantt_time(time_str)
 
-            time_key = (start_time, end_time)
+            # Key by actual datetimes so slots from different calendar days
+            # (e.g. tonight's T3 vs last night's T3) are never merged even
+            # when their formatted time strings are identical.
+            # Fall back to string key only when datetimes couldn't be parsed.
+            time_key = (start_dt, end_dt) if start_dt is not None else (start_time, end_time)
             if time_key in time_groups:
                 time_groups[time_key][0].append(provider_name)
             else:
