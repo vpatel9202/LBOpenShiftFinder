@@ -87,6 +87,7 @@ class TriageShift:
     is_next_day_t1: bool = False   # True for the following-day T1 footer row
     is_prior_day_t3: bool = False  # True for overnight T3 (started previous day, handing off to T1)
     start_dt: datetime | None = field(default=None, repr=False)  # Raw datetime for time filtering (runtime only)
+    end_dt: datetime | None = field(default=None, repr=False)    # Raw end datetime for time filtering (runtime only)
 
 
 @dataclass
@@ -572,8 +573,9 @@ def _process_row(
         return
 
     if is_target:
-        # Group slots by time window to merge multi-provider same-time shifts
-        time_groups: dict[tuple[str | None, str | None], list[str]] = {}
+        # Group slots by time window to merge multi-provider same-time shifts.
+        # Value: (providers, start_dt, end_dt) — all slots in a group share the same times.
+        time_groups: dict[tuple[str | None, str | None], tuple[list[str], datetime | None, datetime | None]] = {}
 
         for slot in slot_elements:
             provider_name = _get_provider_name(slot)
@@ -582,30 +584,23 @@ def _process_row(
 
             times_el = slot.query_selector(TRIAGE_SELECTORS["gantt_times"])
             time_str = times_el.inner_text().strip() if times_el else ""
-            start_time, end_time, start_dt, _ = _parse_gantt_time(time_str)
+            start_time, end_time, start_dt, end_dt = _parse_gantt_time(time_str)
 
             time_key = (start_time, end_time)
             if time_key in time_groups:
-                time_groups[time_key].append(provider_name)
+                time_groups[time_key][0].append(provider_name)
             else:
-                time_groups[time_key] = [provider_name]
+                time_groups[time_key] = ([provider_name], start_dt, end_dt)
 
-        for (start_time, end_time), providers in time_groups.items():
-            # Recover start_dt from any slot in this time group (all have same time)
-            _dt: datetime | None = None
-            for slot in slot_elements:
-                times_el = slot.query_selector(TRIAGE_SELECTORS["gantt_times"])
-                time_str = times_el.inner_text().strip() if times_el else ""
-                _, _, _dt, _ = _parse_gantt_time(time_str)
-                if _dt is not None:
-                    break
+        for (start_time, end_time), (providers, start_dt, end_dt) in time_groups.items():
             shifts.append(TriageShift(
                 label=label,
                 providers=providers,
                 start_time=start_time or "",
                 end_time=end_time or "",
                 source=source,
-                start_dt=_dt,
+                start_dt=start_dt,
+                end_dt=end_dt,
             ))
 
     elif scan_all_for_notes:
@@ -630,7 +625,7 @@ def _process_row(
             if teaching_label:
                 times_el = slot.query_selector(TRIAGE_SELECTORS["gantt_times"])
                 time_str = times_el.inner_text().strip() if times_el else ""
-                start_time, end_time, start_dt, _ = _parse_gantt_time(time_str)
+                start_time, end_time, start_dt, end_dt = _parse_gantt_time(time_str)
                 shifts.append(TriageShift(
                     label=teaching_label,
                     providers=[provider_name],
@@ -638,6 +633,7 @@ def _process_row(
                     end_time=end_time or "",
                     source=source,
                     start_dt=start_dt,
+                    end_dt=end_dt,
                 ))
                 logger.debug(
                     f"Teaching shift (non-target row '{label}'): "
@@ -748,23 +744,34 @@ def scrape_triage_schedule(
             )
             _take_screenshot(page, "triage_08_app_extracted")
 
-            # Step 6: Apply 7 AM time filter and categorize shifts
-            # T3 starting before 7 AM → prior-day overnight handoff
-            # All other shifts starting before 7 AM → exclude
-            # Shifts starting at or after 7 AM → include as normal
+            # Step 6: Apply 7 AM time filter and categorize shifts.
+            #
+            # "Triage day" = 7 AM today → 7 AM tomorrow.
+            # A shift belongs on today's sheet if it is active at any point during that window,
+            # meaning it does NOT finish before 7 AM today.
+            #
+            # Special case: T3 that started on the previous calendar day is the overnight
+            # handoff shift — mark it is_prior_day_t3=True so the PDF places it at the top
+            # as a visual handoff header, regardless of end time.
+            today_midnight = cutoff_07am.replace(hour=0, minute=0, second=0, microsecond=0)
+
             md_filtered: list[TriageShift] = []
             for shift in md_raw:
-                if shift.start_dt is not None and shift.start_dt < cutoff_07am:
-                    if shift.label.upper() == "T3":
-                        shift.is_prior_day_t3 = True
-                        md_filtered.append(shift)
-                    # else: overnight non-T3 shift, exclude
-                else:
-                    md_filtered.append(shift)  # start_dt unknown or >= 7 AM
+                # Prior-day T3: started yesterday, needs to appear at top as handoff
+                if (shift.label.upper() == "T3"
+                        and shift.start_dt is not None
+                        and shift.start_dt < today_midnight):
+                    shift.is_prior_day_t3 = True
+                    md_filtered.append(shift)
+                    continue
+                # Exclude shifts that finish before 7 AM (wrapping up from previous night)
+                if shift.end_dt is not None and shift.end_dt < cutoff_07am:
+                    continue
+                md_filtered.append(shift)
 
             app_filtered: list[TriageShift] = [
                 s for s in app_raw
-                if s.start_dt is None or s.start_dt >= cutoff_07am
+                if s.end_dt is None or s.end_dt >= cutoff_07am
             ]
 
             all_shifts = md_filtered + app_filtered + next_day_t1
