@@ -32,6 +32,8 @@ COLOR_HEADER_BG = (232, 232, 232)   # #E8E8E8
 COLOR_ROW_WHITE = (255, 255, 255)   # #FFFFFF
 COLOR_ROW_GRAY  = (245, 245, 245)   # #F5F5F5
 COLOR_RULE_GRAY = (170, 170, 170)   # #AAAAAA
+COLOR_APP_ROW_BLUE  = (220, 235, 252)  # #DCEAFC — light blue for APP rows
+COLOR_APP_ROW_BLUE2 = (205, 222, 245)  # #CDDEF5 — slightly deeper blue for alternating
 
 
 # ---------------------------------------------------------------------------
@@ -244,8 +246,6 @@ def generate_triage_pdf(
         # ----------------------------------------------------------------
         pdf.set_font("Helvetica", size=9)
 
-        row_colors = [COLOR_ROW_WHITE, COLOR_ROW_GRAY]
-
         for row_idx, shift in enumerate(sorted_shifts):
             # Insert separator after prior-day T3 section (before main shifts)
             if row_idx == main_start_idx and main_start_idx != 0:
@@ -258,7 +258,11 @@ def generate_triage_pdf(
                 _draw_horizontal_rule(pdf, COLOR_RULE_GRAY, 0.3)
                 pdf.ln(3)
 
-            bg = row_colors[row_idx % 2]
+            if shift.source == "app":
+                row_palette = [COLOR_APP_ROW_BLUE, COLOR_APP_ROW_BLUE2]
+            else:
+                row_palette = [COLOR_ROW_WHITE, COLOR_ROW_GRAY]
+            bg = row_palette[row_idx % 2]
 
             provider_text = "\n".join(shift.providers) if shift.providers else ""
             time_text = _format_time_range(shift.start_time, shift.end_time)
