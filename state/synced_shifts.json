@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-03-21T01:47:00.307659+00:00",
+  "last_run": "2026-03-21T12:30:39.137389+00:00",
   "synced_shifts": [
     {
       "date": "2026-03-15",
@@ -64,14 +64,6 @@
       "assignment": "APP A-2",
       "label": "OPEN 1",
       "google_event_id": "mng61ib1qrc36df60qbudgl4ik"
-    },
-    {
-      "date": "2026-04-30",
-      "start_time": "2026-04-30T09:00:00",
-      "end_time": "2026-04-30T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "72mtfmq1c0b76o0odd3ulc2hp4"
     },
     {
       "date": "2026-04-19",
