@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-04-06T20:30:48.024602+00:00",
+  "last_run": "2026-04-07T02:05:43.561820+00:00",
   "synced_shifts": [
     {
       "date": "2026-04-12",
@@ -640,18 +640,18 @@
       "assignment": "APP PA",
       "label": "OPEN 1",
       "google_event_id": "h756beeras36edgppbp1ed1am0"
+    },
+    {
+      "date": "2026-04-05",
+      "start_time": "2026-04-05T21:00:00",
+      "end_time": "2026-04-06T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "00n911b2621m04cc3iupbqnbqs"
     }
   ],
   "picked_shifts": [],
   "scheduled_shifts": [
-    {
-      "date": "2026-04-06",
-      "start_time": "2026-04-06T07:00:00",
-      "end_time": "2026-04-06T17:00:00",
-      "assignment": "R23",
-      "label": "Scheduled",
-      "google_event_id": "8biil3p7dtrt8p3qctfa9ra57k"
-    },
     {
       "date": "2026-04-13",
       "start_time": "2026-04-13T07:00:00",
@@ -1011,6 +1011,14 @@
       "assignment": "A4",
       "label": "Scheduled",
       "google_event_id": "4aen8n0ok18r3sbatdpb8474h8"
+    },
+    {
+      "date": "2026-04-06",
+      "start_time": "2026-04-06T07:00:00",
+      "end_time": "2026-04-06T17:00:00",
+      "assignment": "R23",
+      "label": "Scheduled",
+      "google_event_id": "8biil3p7dtrt8p3qctfa9ra57k"
     },
     {
       "date": "2026-04-05",
