@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-04-09T13:03:35.851629+00:00",
+  "last_run": "2026-04-09T16:58:49.840448+00:00",
   "synced_shifts": [
     {
       "date": "2026-04-12",
@@ -632,6 +632,14 @@
       "assignment": "APP PA",
       "label": "OPEN 1",
       "google_event_id": "h756beeras36edgppbp1ed1am0"
+    },
+    {
+      "date": "2026-04-08",
+      "start_time": "2026-04-08T08:00:00",
+      "end_time": "2026-04-08T17:00:00",
+      "assignment": "APP Onboarding",
+      "label": "OPEN 1",
+      "google_event_id": "h24s0cq8c2ghh515pk4rmgotcg"
     }
   ],
   "picked_shifts": [],
