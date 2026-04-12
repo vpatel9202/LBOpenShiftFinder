@@ -1,14 +1,6 @@
 {
-  "last_run": "2026-04-11T20:23:48.227326+00:00",
+  "last_run": "2026-04-12T02:12:47.660217+00:00",
   "synced_shifts": [
-    {
-      "date": "2026-04-12",
-      "start_time": "2026-04-12T09:00:00",
-      "end_time": "2026-04-12T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "ftehdms13io048o3sjlq7859tc"
-    },
     {
       "date": "2026-04-09",
       "start_time": "2026-04-09T21:00:00",
@@ -160,6 +152,30 @@
       "assignment": "APP Onboarding",
       "label": "OPEN 1",
       "google_event_id": "h24s0cq8c2ghh515pk4rmgotcg"
+    },
+    {
+      "date": "2026-04-28",
+      "start_time": "2026-04-28T21:00:00",
+      "end_time": "2026-04-29T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "t81lsjqmpkci3emel0efqu0oa8"
+    },
+    {
+      "date": "2026-04-29",
+      "start_time": "2026-04-29T21:00:00",
+      "end_time": "2026-04-30T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "38eijf1id4o8bpqu28c1ht176k"
+    },
+    {
+      "date": "2026-04-30",
+      "start_time": "2026-04-30T21:00:00",
+      "end_time": "2026-05-01T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "8ngk1pn3g9baaib73hcqo1f26g"
     },
     {
       "date": "2026-03-15",
@@ -640,30 +656,6 @@
       "assignment": "APP PA",
       "label": "OPEN 1",
       "google_event_id": "h756beeras36edgppbp1ed1am0"
-    },
-    {
-      "date": "2026-04-28",
-      "start_time": "2026-04-28T21:00:00",
-      "end_time": "2026-04-29T07:00:00",
-      "assignment": "APP PA",
-      "label": "OPEN 1",
-      "google_event_id": "t81lsjqmpkci3emel0efqu0oa8"
-    },
-    {
-      "date": "2026-04-29",
-      "start_time": "2026-04-29T21:00:00",
-      "end_time": "2026-04-30T07:00:00",
-      "assignment": "APP PA",
-      "label": "OPEN 1",
-      "google_event_id": "38eijf1id4o8bpqu28c1ht176k"
-    },
-    {
-      "date": "2026-04-30",
-      "start_time": "2026-04-30T21:00:00",
-      "end_time": "2026-05-01T07:00:00",
-      "assignment": "APP PA",
-      "label": "OPEN 1",
-      "google_event_id": "8ngk1pn3g9baaib73hcqo1f26g"
     }
   ],
   "picked_shifts": [],
