@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-04-15T02:09:22.693869+00:00",
+  "last_run": "2026-04-15T13:04:18.869511+00:00",
   "synced_shifts": [
     {
       "date": "2026-04-09",
@@ -176,6 +176,70 @@
       "assignment": "APP PA",
       "label": "OPEN 1",
       "google_event_id": "7u286shoh1gqc63v034p5gga1k"
+    },
+    {
+      "date": "2026-06-17",
+      "start_time": "2026-06-17T09:00:00",
+      "end_time": "2026-06-17T19:00:00",
+      "assignment": "APP A-2",
+      "label": "OPEN 1",
+      "google_event_id": "7papeq4hfc6jbkbbdvmet26r84"
+    },
+    {
+      "date": "2026-06-18",
+      "start_time": "2026-06-18T09:00:00",
+      "end_time": "2026-06-18T19:00:00",
+      "assignment": "APP A-2",
+      "label": "OPEN 1",
+      "google_event_id": "rm3rhfohkljok837jevolapoho"
+    },
+    {
+      "date": "2026-06-17",
+      "start_time": "2026-06-17T14:00:00",
+      "end_time": "2026-06-18T00:00:00",
+      "assignment": "APP A-3",
+      "label": "OPEN 1",
+      "google_event_id": "qqrsibopchprhlie9a5bgsdd0s"
+    },
+    {
+      "date": "2026-06-18",
+      "start_time": "2026-06-18T14:00:00",
+      "end_time": "2026-06-19T00:00:00",
+      "assignment": "APP A-3",
+      "label": "OPEN 1",
+      "google_event_id": "ag0d0msi6buibe1cdg1eta4a44"
+    },
+    {
+      "date": "2026-06-17",
+      "start_time": "2026-06-17T21:00:00",
+      "end_time": "2026-06-18T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "i5e5ma93n8n05rrvimksn05ksk"
+    },
+    {
+      "date": "2026-06-27",
+      "start_time": "2026-06-27T07:00:00",
+      "end_time": "2026-06-27T17:00:00",
+      "assignment": "APP A-1B",
+      "label": "OPEN 1",
+      "google_event_id": "l463hl8pqmaoctebe88tg7log4"
+    },
+    {
+      "date": "2026-06-26",
+      "start_time": "2026-06-26T09:00:00",
+      "end_time": "2026-06-26T19:00:00",
+      "assignment": "APP A-2",
+      "label": "OPEN 1",
+      "google_event_id": "ro4duj1b7lgurpdrt3pobj9ud8"
+    },
+    {
+      "date": "2026-06-27",
+      "start_time": "2026-06-27T09:00:00",
+      "end_time": "2026-06-27T19:00:00",
+      "assignment": "APP A-2",
+      "label": "OPEN 1",
+      "google_event_id": "fkvaaaqm120q350225fo8s7q7c"
     },
     {
       "date": "2026-03-15",
@@ -656,90 +720,10 @@
       "assignment": "APP PA",
       "label": "OPEN 1",
       "google_event_id": "h756beeras36edgppbp1ed1am0"
-    },
-    {
-      "date": "2026-06-17",
-      "start_time": "2026-06-17T09:00:00",
-      "end_time": "2026-06-17T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "7papeq4hfc6jbkbbdvmet26r84"
-    },
-    {
-      "date": "2026-06-18",
-      "start_time": "2026-06-18T09:00:00",
-      "end_time": "2026-06-18T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "rm3rhfohkljok837jevolapoho"
-    },
-    {
-      "date": "2026-06-17",
-      "start_time": "2026-06-17T14:00:00",
-      "end_time": "2026-06-18T00:00:00",
-      "assignment": "APP A-3",
-      "label": "OPEN 1",
-      "google_event_id": "qqrsibopchprhlie9a5bgsdd0s"
-    },
-    {
-      "date": "2026-06-18",
-      "start_time": "2026-06-18T14:00:00",
-      "end_time": "2026-06-19T00:00:00",
-      "assignment": "APP A-3",
-      "label": "OPEN 1",
-      "google_event_id": "ag0d0msi6buibe1cdg1eta4a44"
-    },
-    {
-      "date": "2026-06-17",
-      "start_time": "2026-06-17T21:00:00",
-      "end_time": "2026-06-18T07:00:00",
-      "assignment": "APP PA",
-      "label": "OPEN 1",
-      "google_event_id": "i5e5ma93n8n05rrvimksn05ksk"
-    },
-    {
-      "date": "2026-06-27",
-      "start_time": "2026-06-27T07:00:00",
-      "end_time": "2026-06-27T17:00:00",
-      "assignment": "APP A-1B",
-      "label": "OPEN 1",
-      "google_event_id": "l463hl8pqmaoctebe88tg7log4"
-    },
-    {
-      "date": "2026-06-26",
-      "start_time": "2026-06-26T09:00:00",
-      "end_time": "2026-06-26T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "ro4duj1b7lgurpdrt3pobj9ud8"
-    },
-    {
-      "date": "2026-06-27",
-      "start_time": "2026-06-27T09:00:00",
-      "end_time": "2026-06-27T19:00:00",
-      "assignment": "APP A-2",
-      "label": "OPEN 1",
-      "google_event_id": "fkvaaaqm120q350225fo8s7q7c"
-    },
-    {
-      "date": "2026-06-26",
-      "start_time": "2026-06-26T14:00:00",
-      "end_time": "2026-06-27T00:00:00",
-      "assignment": "APP A-3",
-      "label": "OPEN 1",
-      "google_event_id": "ubg1pcb9uqfup3uuhg17dptvp0"
     }
   ],
   "picked_shifts": [],
   "scheduled_shifts": [
-    {
-      "date": "2026-04-14",
-      "start_time": "2026-04-14T07:00:00",
-      "end_time": "2026-04-14T17:00:00",
-      "assignment": "R24",
-      "label": "Scheduled",
-      "google_event_id": "l6vb305bv586vn46oi4vpab5d8"
-    },
     {
       "date": "2026-04-15",
       "start_time": "2026-04-15T07:00:00",
@@ -1083,6 +1067,14 @@
       "assignment": "A4",
       "label": "Scheduled",
       "google_event_id": "4aen8n0ok18r3sbatdpb8474h8"
+    },
+    {
+      "date": "2026-04-14",
+      "start_time": "2026-04-14T07:00:00",
+      "end_time": "2026-04-14T17:00:00",
+      "assignment": "R24",
+      "label": "Scheduled",
+      "google_event_id": "l6vb305bv586vn46oi4vpab5d8"
     },
     {
       "date": "2026-04-13",
