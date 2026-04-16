@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-04-16T17:05:22.124281+00:00",
+  "last_run": "2026-04-16T20:40:21.336462+00:00",
   "synced_shifts": [
     {
       "date": "2026-04-09",
@@ -88,14 +88,6 @@
       "assignment": "Care Team APP - 1",
       "label": "OPEN 1",
       "google_event_id": "n98eucu2pue8i6fo0n27qap8ho"
-    },
-    {
-      "date": "2026-06-17",
-      "start_time": "2026-06-17T19:00:00",
-      "end_time": "2026-06-18T07:00:00",
-      "assignment": "Backup night - 1",
-      "label": "OPEN 1",
-      "google_event_id": "vl06ogp0sjfcc5gleaddjhm6sk"
     },
     {
       "date": "2026-04-03",
