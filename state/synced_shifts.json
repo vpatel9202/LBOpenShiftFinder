@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-04-21T20:41:28.459282+00:00",
+  "last_run": "2026-04-22T02:11:43.543749+00:00",
   "synced_shifts": [
     {
       "date": "2026-04-09",
@@ -664,18 +664,18 @@
       "assignment": "APP PA",
       "label": "OPEN 1",
       "google_event_id": "h756beeras36edgppbp1ed1am0"
+    },
+    {
+      "date": "2026-04-20",
+      "start_time": "2026-04-20T21:00:00",
+      "end_time": "2026-04-21T07:00:00",
+      "assignment": "APP PA",
+      "label": "OPEN 1",
+      "google_event_id": "k77su4nbgoquv3ugh16pba893k"
     }
   ],
   "picked_shifts": [],
   "scheduled_shifts": [
-    {
-      "date": "2026-04-21",
-      "start_time": "2026-04-21T07:00:00",
-      "end_time": "2026-04-21T17:00:00",
-      "assignment": "R12",
-      "label": "Scheduled",
-      "google_event_id": "4if27fth02fnovqak3ei5s8d1k"
-    },
     {
       "date": "2026-04-22",
       "start_time": "2026-04-22T07:00:00",
@@ -981,6 +981,30 @@
       "google_event_id": "4aen8n0ok18r3sbatdpb8474h8"
     },
     {
+      "date": "2026-05-08",
+      "start_time": "2026-05-08T09:00:00",
+      "end_time": "2026-05-08T19:00:00",
+      "assignment": "APP A-2",
+      "label": "Scheduled",
+      "google_event_id": "s5lj65fnb4l6ufhhgma8gsrlus"
+    },
+    {
+      "date": "2026-05-24",
+      "start_time": "2026-05-24T09:00:00",
+      "end_time": "2026-05-24T19:00:00",
+      "assignment": "APP A-2",
+      "label": "Scheduled",
+      "google_event_id": "u1t1up6dcchrd6u67i5957im84"
+    },
+    {
+      "date": "2026-04-21",
+      "start_time": "2026-04-21T07:00:00",
+      "end_time": "2026-04-21T17:00:00",
+      "assignment": "R12",
+      "label": "Scheduled",
+      "google_event_id": "4if27fth02fnovqak3ei5s8d1k"
+    },
+    {
       "date": "2026-04-20",
       "start_time": "2026-04-20T07:00:00",
       "end_time": "2026-04-20T17:00:00",
@@ -1227,22 +1251,6 @@
       "assignment": "R20",
       "label": "Scheduled",
       "google_event_id": "o0v1qi3vm7rqq4t1r1qfv4gdg4"
-    },
-    {
-      "date": "2026-05-08",
-      "start_time": "2026-05-08T09:00:00",
-      "end_time": "2026-05-08T19:00:00",
-      "assignment": "APP A-2",
-      "label": "Scheduled",
-      "google_event_id": "s5lj65fnb4l6ufhhgma8gsrlus"
-    },
-    {
-      "date": "2026-05-24",
-      "start_time": "2026-05-24T09:00:00",
-      "end_time": "2026-05-24T19:00:00",
-      "assignment": "APP A-2",
-      "label": "Scheduled",
-      "google_event_id": "u1t1up6dcchrd6u67i5957im84"
     }
   ]
 }
