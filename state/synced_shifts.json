@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-04-24T13:02:40.276366+00:00",
+  "last_run": "2026-04-24T16:45:54.488722+00:00",
   "synced_shifts": [
     {
       "date": "2026-04-09",
@@ -16,14 +16,6 @@
       "assignment": "Care Team APP - 1",
       "label": "OPEN 1",
       "google_event_id": "faool2ok3p0n2d7o50fnqfg0e0"
-    },
-    {
-      "date": "2026-05-01",
-      "start_time": "2026-05-01T21:00:00",
-      "end_time": "2026-05-02T07:00:00",
-      "assignment": "APP PA",
-      "label": "OPEN 1",
-      "google_event_id": "kbbpb2gh7kn5ru9q0e63f46cio"
     },
     {
       "date": "2026-04-18",
@@ -1251,6 +1243,14 @@
       "assignment": "R20",
       "label": "Scheduled",
       "google_event_id": "o0v1qi3vm7rqq4t1r1qfv4gdg4"
+    },
+    {
+      "date": "2026-05-13",
+      "start_time": "2026-05-13T09:00:00",
+      "end_time": "2026-05-13T19:00:00",
+      "assignment": "APP A-2",
+      "label": "Scheduled",
+      "google_event_id": "e6fpo6iaap93g5n8noalfk3cls"
     }
   ]
 }
